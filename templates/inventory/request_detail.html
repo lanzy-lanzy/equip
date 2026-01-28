@@ -306,14 +306,10 @@
             
             <div class="flex flex-wrap items-center justify-center md:justify-end gap-3 shrink-0">
                 {% if supply_request.status == 'pending' %}
-                    <form method="post" action="{% url 'request_approve' supply_request.pk %}">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="approve">
-                        <button type="submit"
-                            class="inline-flex items-center px-8 py-3 bg-emerald-600 text-white text-sm font-black rounded-xl hover:bg-emerald-700 transition-all hover:scale-105 shadow-md shadow-emerald-100">
-                            <i class="fas fa-check-circle mr-2"></i> Approve {% if is_batch %}Entire Batch{% endif %}
-                        </button>
-                    </form>
+                    <button onclick="showApproveModal()"
+                        class="inline-flex items-center px-8 py-3 bg-emerald-600 text-white text-sm font-black rounded-xl hover:bg-emerald-700 transition-all hover:scale-105 shadow-md shadow-emerald-100">
+                        <i class="fas fa-check-circle mr-2"></i> Approve {% if is_batch %}Entire Batch{% endif %}
+                    </button>
 
                     <button onclick="showRejectModal()"
                         class="inline-flex items-center px-8 py-3 bg-red-600 text-white text-sm font-black rounded-xl hover:bg-red-700 transition-all hover:scale-105 shadow-md shadow-red-100">
@@ -343,6 +339,51 @@
         </div>
     </div>
 {% endif %}
+
+<!-- Approval Modal -->
+<div id="approve-modal" x-data="{ items: [] }" 
+    class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden">
+        <div class="bg-emerald-600 p-6 text-white flex items-center justify-between">
+            <h3 class="text-xl font-black">Confirm Approval</h3>
+            <button onclick="closeApproveModal()" class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="p-8">
+            <p class="text-gray-600 mb-4 font-medium">Review the items to be approved:</p>
+            
+            <div class="bg-gray-50 rounded-2xl p-4 mb-6 max-h-60 overflow-y-auto border-2 border-gray-100">
+                <template x-for="item in items" :key="item.id">
+                    <div class="flex justify-between items-center py-3 border-b border-gray-100 last:border-0">
+                        <div>
+                            <div class="text-sm font-black text-gray-900" x-text="item.name"></div>
+                            <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest" x-text="item.category"></div>
+                        </div>
+                        <div class="text-sm font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
+                            <span x-text="item.qty"></span> <span x-text="item.unit"></span>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <div class="flex gap-3">
+                <button type="button" onclick="closeApproveModal()"
+                    class="flex-1 py-3 bg-gray-100 text-gray-700 text-sm font-black rounded-2xl hover:bg-gray-200 transition-colors">
+                    Cancel
+                </button>
+                <form method="post" action="{% url 'request_approve' supply_request.pk %}" class="flex-1">
+                    {% csrf_token %}
+                    <button type="submit"
+                        class="w-full py-3 bg-emerald-600 text-white text-sm font-black rounded-2xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100">
+                        Confirm Approval
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Reject Request Modal -->
 <div id="reject-modal" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
@@ -408,6 +449,39 @@
         }, 200);
     }
 
+    function showApproveModal() {
+        const modal = document.getElementById('approve-modal');
+        const alpineData = Alpine.$data(modal);
+        
+        const items = [];
+        {% if is_batch %}
+            {% for item in batch_items %}
+                items.push({
+                    id: {{ item.id }},
+                    name: "{{ item.supply.name|escapejs }}",
+                    category: "{{ item.supply.category.name|escapejs }}",
+                    qty: "{{ item.quantity_requested }}",
+                    unit: "{{ item.supply.unit|escapejs }}"
+                });
+            {% endfor %}
+        {% else %}
+            items.push({
+                id: {{ supply_request.id }},
+                name: "{{ supply_request.supply.name|escapejs }}",
+                category: "{{ supply_request.supply.category.name|escapejs }}",
+                qty: "{{ supply_request.quantity_requested }}",
+                unit: "{{ supply_request.supply.unit|escapejs }}"
+            });
+        {% endif %}
+        
+        alpineData.items = items;
+        modal.classList.remove('hidden');
+    }
+
+    function closeApproveModal() {
+        document.getElementById('approve-modal').classList.add('hidden');
+    }
+
     function showRejectModal() {
         document.getElementById('reject-modal').classList.remove('hidden');
     }
@@ -416,9 +490,11 @@
         document.getElementById('reject-modal').classList.add('hidden');
     }
 
-    // Close modal when clicking outside
-    document.getElementById('reject-modal').addEventListener('click', function (e) {
-        if (e.target === this) closeRejectModal();
+    // Close modals when clicking outside
+    window.addEventListener('click', function (e) {
+        document.querySelectorAll('.fixed').forEach(modal => {
+            if (e.target === modal) modal.classList.add('hidden');
+        });
     });
 </script>
 {% endblock %}

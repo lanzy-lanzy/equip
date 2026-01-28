@@ -874,54 +874,57 @@ def request_approve(request, pk):
         messages.error(request, "Request is not pending")
         return redirect("request_detail", pk=pk)
 
-    # Check if this is a borrowing request
-    is_borrowing_request = supply_request.purpose.startswith("[BORROWING]")
+    # Regular supply or borrowing request approval
+    now = timezone.now()
+    supply_request.status = "approved"
+    supply_request.approved_by = request.user
+    supply_request.approved_at = now
+    supply_request.save()
 
-    if is_borrowing_request:
-        # For borrowing requests, redirect to a form where GSO staff can set dates
-        return redirect("approve_borrow_request", pk=pk)
-    else:
-        # Regular supply request approval
-        now = timezone.now()
-        supply_request.status = "approved"
-        supply_request.approved_by = request.user
-        supply_request.approved_at = now
-        supply_request.save()
+    # Sync with other items in the same batch
+    batch_qs = SupplyRequest.objects.filter(
+        user=supply_request.user,
+        created_at__year=supply_request.created_at.year,
+        created_at__month=supply_request.created_at.month,
+        created_at__day=supply_request.created_at.day,
+        created_at__hour=supply_request.created_at.hour,
+        created_at__minute=supply_request.created_at.minute,
+        status="pending"
+    )
 
-        # Sync with other items in the same batch
-        batch_qs = SupplyRequest.objects.filter(
+    synchronized_count = batch_qs.exclude(pk=supply_request.pk).update(
+        status="approved", approved_by=request.user, approved_at=now
+    )
+
+    # Proactively generate/sync batch QR code
+    total_batch_count = synchronized_count + 1
+    if total_batch_count > 1:
+        group_id = f"{supply_request.user.id}-{supply_request.created_at.strftime('%Y%m%d%H%M')}"
+        supply_request.generate_borrowing_qr_code(group_id=group_id)
+        # Update all items in batch including the current one
+        SupplyRequest.objects.filter(
             user=supply_request.user,
             created_at__year=supply_request.created_at.year,
             created_at__month=supply_request.created_at.month,
             created_at__day=supply_request.created_at.day,
             created_at__hour=supply_request.created_at.hour,
             created_at__minute=supply_request.created_at.minute,
-        )
+        ).update(borrowing_qr_code=supply_request.borrowing_qr_code.name)
 
-        batch_qs.filter(status="pending").update(
-            status="approved", approved_by=request.user, approved_at=now
-        )
+    success_msg = f"Request {supply_request.request_id} approved successfully."
+    if synchronized_count > 0:
+        success_msg = f"Batch approved successfully. {total_batch_count} items are now ready."
 
-        # Proactively generate batch QR code for unified scanning
-        if batch_qs.count() > 1:
-            group_id = f"{supply_request.user.id}-{supply_request.created_at.strftime('%Y%m%d%H%M')}"
-            supply_request.generate_borrowing_qr_code(group_id=group_id)
-            batch_qs.update(borrowing_qr_code=supply_request.borrowing_qr_code.name)
+    if request.htmx:
+        messages.success(request, success_msg)
+        return HttpResponseClientRefresh()
 
-        if request.htmx:
-            messages.success(
-                request, f"Request {supply_request.request_id} approved successfully."
-            )
-            return HttpResponseClientRefresh()
-
-        messages.success(
-            request, f"Request {supply_request.request_id} approved successfully."
-        )
-        # Redirect back to the referring page or request detail
-        next_url = request.GET.get("next") or request.META.get("HTTP_REFERER")
-        if next_url:
-            return redirect(next_url)
-        return redirect("request_detail", pk=pk)
+    messages.success(request, success_msg)
+    # Redirect back to the referring page or request detail
+    next_url = request.GET.get("next") or request.META.get("HTTP_REFERER")
+    if next_url:
+        return redirect(next_url)
+    return redirect("request_detail", pk=pk)
 
 
 @login_required
@@ -5955,14 +5958,29 @@ def bulk_approve_request(request, group_id):
         requests = SupplyRequest.objects.filter(user_id=user_id, status="pending")
 
         count = 0
+        now = timezone.now()
         for req in requests:
             if req.created_at.strftime("%Y%m%d%H%M") == target_time:
-                if not req.purpose.startswith("[BORROWING]"):
-                    req.status = "approved"
-                    req.approved_by = request.user
-                    req.approved_at = timezone.now()
-                    req.save()
-                    count += 1
+                req.status = "approved"
+                req.approved_by = request.user
+                req.approved_at = now
+                req.save()
+                count += 1
+        
+        # Proactively generate/sync batch QR code if items were approved
+        if count > 0:
+            approved_batch = SupplyRequest.objects.filter(
+                user_id=user_id, 
+                created_at__year=int(target_time[:4]),
+                created_at__month=int(target_time[4:6]),
+                created_at__day=int(target_time[6:8]),
+                created_at__hour=int(target_time[8:10]),
+                created_at__minute=int(target_time[10:12]),
+            )
+            if approved_batch.count() > 1:
+                first_req = approved_batch[0]
+                first_req.generate_borrowing_qr_code(group_id=group_id)
+                approved_batch.update(borrowing_qr_code=first_req.borrowing_qr_code.name)
 
         messages.success(request, f"Successfully approved {count} items in the group.")
     except Exception as e:

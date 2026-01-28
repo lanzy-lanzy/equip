@@ -145,17 +145,33 @@
 </div>
 
 <!-- Bulk Approval Modal -->
-<div id="bulk-approve-modal"
+<div id="bulk-approve-modal" x-data="{ items: [], displayId: '', isGroup: false, id: '' }"
     class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+    <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6">
         <div class="text-center">
             <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <i class="fas fa-check-double text-2xl text-green-600"></i>
             </div>
-            <h3 class="text-lg font-semibold text-gray-800 mb-2">Approve Group Request</h3>
-            <p class="text-gray-600 mb-6">
-                Are you sure you want to approve all items in <span id="bulk-approve-id" class="font-medium"></span>?
+            <h3 class="text-xl font-bold text-gray-800 mb-2">Confirm Approval</h3>
+            <p class="text-gray-600 mb-4">
+                You are about to approve the following items in <span x-text="displayId" class="font-mono font-bold text-indigo-600"></span>
             </p>
+            
+            <!-- Items List -->
+            <div class="bg-gray-50 rounded-lg p-4 mb-6 text-left max-h-60 overflow-y-auto border border-gray-100">
+                <template x-for="item in items" :key="item.id">
+                    <div class="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+                        <div>
+                            <div class="text-sm font-semibold text-gray-900" x-text="item.name"></div>
+                            <div class="text-xs text-gray-500" x-text="item.details"></div>
+                        </div>
+                        <div class="text-sm font-mono text-gray-700 bg-white px-2 py-1 rounded border border-gray-200">
+                            <span x-text="item.qty"></span> <span x-text="item.unit"></span>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
             <div class="flex space-x-3">
                 <button onclick="closeBulkApproveModal()"
                     class="flex-1 px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors">
@@ -164,8 +180,8 @@
                 <form id="bulk-approve-form" method="post" class="flex-1">
                     {% csrf_token %}
                     <button type="submit"
-                        class="w-full px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
-                        Approve All
+                        class="w-full px-4 py-2 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 transition-colors shadow-sm">
+                        Confirm Approval
                     </button>
                 </form>
             </div>
@@ -238,16 +254,46 @@
 
 <script>
     function showBulkApproveModal(id, displayId, isGroup) {
-        document.getElementById('bulk-approve-id').textContent = displayId;
+        const modal = document.getElementById('bulk-approve-modal');
+        const alpineData = Alpine.$data(modal);
+        
+        alpineData.displayId = displayId;
+        alpineData.id = id;
+        alpineData.isGroup = isGroup;
+        
+        // Find the items for this group in the table
+        const items = [];
+        // Extract data from the row
+        const row = document.querySelector(`button[onclick*="'${id}'"]`).closest('tr');
+        const itemRows = row.querySelectorAll('td:nth-child(2) .text-sm');
+        
+        itemRows.forEach(ir => {
+            const name = ir.querySelector('.font-medium').textContent.trim();
+            const qtyText = ir.querySelector('.text-gray-500').textContent.trim(); // (1 pieces)
+            const qtyStr = qtyText.replace('(', '').replace(')', '');
+            const parts = qtyStr.split(' ');
+            const qty = parts[0];
+            const unit = parts.slice(1).join(' ');
+            
+            items.push({
+                id: Math.random(),
+                name: name,
+                qty: qty,
+                unit: unit,
+                details: row.querySelector('td:nth-child(2) .bg-purple-100') ? 'Borrowing Request' : 'Supply Request'
+            });
+        });
+        
+        alpineData.items = items;
+        
         const form = document.getElementById('bulk-approve-form');
         if (isGroup) {
             form.action = `/requests/bulk/${id}/approve/`;
         } else {
-            // For single requests, we convert the 'S-PK' ID back to just PK
             const pk = id.startsWith('S-') ? id.substring(2) : id;
             form.action = `/requests/${pk}/approve/`;
         }
-        document.getElementById('bulk-approve-modal').classList.remove('hidden');
+        modal.classList.remove('hidden');
     }
 
     function closeBulkApproveModal() {
