@@ -1,391 +1,313 @@
 {% extends 'base.html' %}
 
-{% block title %}Request to Borrow Item - Smart Supply Management System{% endblock %}
+{% block title %}Request Borrow - Smart Supply{% endblock %}
 
 {% block content %}
-<!-- Page Header -->
-<div class="mb-8">
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+<div x-data="borrowSingle()" class="max-w-7xl mx-auto px-4 py-8">
+    <!-- Page Header -->
+    <div class="mb-10 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
         <div>
-            <h1 class="text-3xl font-bold text-gray-800 mb-2">Request to Borrow Item</h1>
-            <p class="text-gray-600">Submit a request to borrow items - GSO staff will review and approve</p>
+            <nav class="flex mb-4" aria-label="Breadcrumb">
+                <ol class="flex items-center space-x-2 text-sm text-gray-700 font-black">
+                    <li><a href="{% url 'dashboard' %}" class="hover:text-red-600 transition-colors">Dashboard</a></li>
+                    <li class="flex items-center whitespace-nowrap"><i class="fas fa-chevron-right text-xs mx-2 text-gray-400"></i> Borrow</li>
+                    <li class="flex items-center whitespace-nowrap"><i class="fas fa-chevron-right text-xs mx-2 text-gray-400"></i> <span class="text-gray-900 underline decoration-red-500 decoration-2">Single Request</span></li>
+                </ol>
+            </nav>
+            <h1 class="text-4xl font-black tracking-tight text-gray-900 sm:text-5xl">
+                Request <span class="text-red-600">Borrow</span>
+            </h1>
+            <p class="mt-2 text-lg text-gray-800 font-medium">Select an item and submit a request for GSO approval.</p>
         </div>
-        <div class="mt-4 md:mt-0 flex gap-2">
-            <a href="{% url 'request_borrow_batch' %}"
-                class="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
-                <i class="fas fa-list mr-2"></i>
-                Batch Request
+        <div class="flex gap-3">
+            <a href="{% url 'request_borrow_batch' %}" class="btn bg-white border border-gray-300 text-gray-900 hover:bg-gray-50 px-6 py-3 rounded-xl transition-all shadow-md flex items-center font-black">
+                <i class="fas fa-layer-group mr-2 text-orange-600"></i> Batch Request
             </a>
-            <a href="{% url 'request_list' %}"
-                class="inline-flex items-center px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors">
-                <i class="fas fa-arrow-left mr-2"></i>
-                Back to Requests
+            <a href="{% url 'request_list' %}" class="btn bg-white border border-gray-300 text-gray-900 hover:bg-gray-50 px-6 py-3 rounded-xl transition-all shadow-md flex items-center font-black">
+                <i class="fas fa-history mr-2 text-red-600"></i> My Requests
             </a>
         </div>
     </div>
-</div>
 
-<!-- Borrow Request Form -->
-<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-    <form method="post">
-        {% csrf_token %}
-
-        {% if form.non_field_errors %}
-        <div class="mb-6 bg-red-50 border-l-4 border-red-400 p-4 rounded">
-            {% for error in form.non_field_errors %}
-            <p class="text-red-700 text-sm">{{ error }}</p>
-            {% endfor %}
-        </div>
-        {% endif %}
-
-        {% if not can_borrow %}
-        <div class="mb-6 bg-red-50 border-l-4 border-red-400 p-4 rounded">
-            <p class="text-red-800 text-sm">
-                You have {{ overdue_items.count }} overdue item(s). Please return them before borrowing new items.
-                <a href="{% url 'borrowed_items_list' %}" class="underline text-red-800 ml-2">View borrowed items</a>
-            </p>
-        </div>
-        {% endif %}
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Supply Selection -->
-            <div class="md:col-span-2">
-                <label for="{{ form.supply.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-3">
-                    Select Item to Borrow *
-                </label>
-
-                <!-- Non-Consumable Items Section (Equipment Only) -->
-                <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 mb-4">
-                    <p class="text-sm font-medium text-blue-900 mb-3">
-                        <i class="fas fa-cube text-blue-600 mr-2"></i>📦 Equipment Items Only
-                    </p>
-                    <p class="text-sm text-blue-700 mb-3">
-                        This form is for borrowing <strong>non-consumable equipment</strong> (items you can reuse like
-                        printers, keyboards, monitors, etc.)
-                    </p>
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        <!-- Left Column: Form (5 cols) -->
+        <div class="lg:col-span-12 xl:col-span-5 space-y-6">
+            <div class="glass-panel rounded-3xl overflow-hidden border border-gray-100 shadow-xl bg-white">
+                <div class="bg-red-700 px-6 py-4 flex items-center justify-between text-white border-b border-red-800 shadow-inner">
+                    <h2 class="text-xl font-black flex items-center tracking-tight">
+                        <i class="fas fa-file-signature mr-3 text-red-100"></i> Request Form
+                    </h2>
                 </div>
-
-                <div class="mb-3">
-                    <div class="inline-flex rounded-md shadow-sm" role="tablist" aria-label="Select type">
-                        <button type="button" class="type-filter-btn px-3 py-2 bg-indigo-600 text-white rounded-l-md"
-                            data-filter="equipment">Equipment</button>
-                        <button type="button" class="type-filter-btn px-3 py-2 bg-white text-gray-700 border-l"
-                            data-filter="materials">Materials</button>
-                    </div>
-                </div>
-
-                <!-- Search Input -->
-                <div class="mb-3">
-                    <input type="text" id="supply-search"
-                        class="form-input block w-full px-4 py-2 border border-gray-300 rounded-lg"
-                        placeholder="Search items by name or category...">
-                </div>
-
-                <select id="{{ form.supply.id_for_label }}" name="{{ form.supply.name }}"
-                    class="form-select block w-full px-4 py-2 border border-gray-300 rounded-lg"
-                    aria-label="Select item to borrow">
-                    <option value="">-- Select item to borrow --</option>
-                    {% for supply in form.supply.field.queryset %}
-                    {# Determine if this supply is a material by category flag or non-consumable equipment #}
-                    {% with is_material=supply.category.is_material is_consumable=supply.is_consumable %}
-                    <option value="{{ supply.pk }}" data-is-material="{{ is_material|yesno:'1,0' }}"
-                        data-is-consumable="{{ is_consumable|yesno:'1,0' }}"
-                        data-name="{{ supply.name|lower|escapejs }}"
-                        data-category="{{ supply.category.name|lower|escapejs }}">
-                        {{ supply.name }} ({{ supply.quantity }} {{ supply.unit }} available)
-                    </option>
-                    {% endwith %}
-                    {% endfor %}
-                </select>
-                <p id="supply-help" class="mt-1 text-sm text-gray-500">
-                    <i class="fas fa-check-circle mr-1 text-green-600"></i>Only available equipment items are shown
-                </p>
-
-                {% if form.supply.errors %}
-                <p class="mt-2 text-sm text-red-600">{{ form.supply.errors.0 }}</p>
-                {% endif %}
-
-                <!-- Selected Item Display -->
-                <div id="selected-item-info" class="mt-4 p-4 bg-indigo-50 border-l-4 border-indigo-500 rounded hidden">
-                    <div class="flex items-start justify-between">
+                
+                <form method="post" class="p-6 space-y-5">
+                    {% csrf_token %}
+                    
+                    {% if not can_borrow %}
+                    <div class="mb-6 bg-red-50 border border-red-200 p-4 rounded-2xl flex items-start">
+                        <i class="fas fa-exclamation-triangle text-red-600 mt-1 mr-3"></i>
                         <div>
-                            <p class="text-sm text-gray-600">Selected Item:</p>
-                            <p id="selected-item-name" class="text-lg font-semibold text-indigo-900 mt-1"></p>
-                            <p id="selected-item-type" class="text-xs text-indigo-600 mt-1"></p>
-                            <p id="selected-item-location" class="text-xs text-indigo-600 mt-1"></p>
+                            <p class="text-red-900 text-sm font-black italic">Borrowing Restricted</p>
+                            <p class="text-red-700 text-xs mt-1 font-bold">
+                                You have {{ overdue_items.count }} overdue item(s).
+                                <a href="{% url 'borrowed_items_list' %}" class="underline hover:text-red-900 ml-1">Return them first</a>
+                            </p>
                         </div>
-                        <div class="text-right">
-                            <p class="text-sm text-gray-600">Available:</p>
-                            <p id="available-qty" class="text-2xl font-bold text-indigo-700 mt-1">0</p>
-                            <p id="available-unit" class="text-xs text-indigo-600 mt-1">units</p>
+                    </div>
+                    {% endif %}
+
+                    <!-- Searchable Selection -->
+                    <div>
+                        <label class="block text-sm font-black text-gray-900 mb-2">Item to Borrow *</label>
+                        <div class="relative group" @click.away="open = false">
+                            <i class="fas fa-box absolute left-4 top-3.5" :class="selectedItem ? 'text-red-600' : 'text-gray-400'"></i>
+                            <input type="text" x-model="searchQuery" @focus="open = true" 
+                                placeholder="Search inventory..."
+                                class="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-red-600 focus:bg-white transition-all font-black text-gray-900 outline-none">
+                            
+                            <!-- Search Results Dropdown -->
+                            <div x-show="open && filteredItems.length > 0" x-transition
+                                class="absolute z-10 w-full mt-2 bg-white border border-gray-200 rounded-2xl shadow-2xl max-h-60 overflow-y-auto custom-scrollbar">
+                                <template x-for="item in filteredItems" :key="item.id">
+                                    <div @click="selectItem(item)" 
+                                        class="p-4 hover:bg-gray-50 border-b border-gray-100 cursor-pointer flex justify-between items-center group">
+                                        <div>
+                                            <p class="font-black text-gray-900 group-hover:text-red-600 transition-colors" x-text="item.name"></p>
+                                            <p class="text-[10px] text-gray-500 font-bold uppercase" x-text="item.category"></p>
+                                        </div>
+                                        <div class="text-right">
+                                            <span class="text-sm font-black text-red-600" x-text="item.stock"></span>
+                                            <span class="text-[9px] text-gray-500 font-black uppercase" x-text="item.unit"></span>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <select name="supply" x-model="selectedId" class="hidden" required>
+                                <option value=""></option>
+                                <template x-for="item in items" :key="item.id">
+                                    <option :value="item.id" x-text="item.name"></option>
+                                </template>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Selected Item Info Card -->
+                    <template x-if="selectedItem">
+                        <div class="space-y-4">
+                            <div class="bg-indigo-50/50 border border-indigo-100 p-4 rounded-2xl flex justify-between items-center transition-all animate-pulse-subtle">
+                                <div>
+                                    <p class="text-[10px] font-black text-indigo-700 uppercase tracking-widest">Selected Item</p>
+                                    <p class="text-lg font-black text-indigo-900" x-text="selectedItem.name"></p>
+                                    <p class="text-xs text-indigo-600 font-bold" x-text="selectedItem.location"></p>
+                                </div>
+                                <div class="text-right bg-white p-3 rounded-xl shadow-sm border border-indigo-100">
+                                    <p class="text-[9px] font-black text-indigo-800 uppercase leading-none mb-1">Stock</p>
+                                    <p class="text-2xl font-black text-red-600 leading-none" x-text="selectedItem.stock"></p>
+                                    <p class="text-[9px] font-black text-gray-500 uppercase mt-1" x-text="selectedItem.unit"></p>
+                                </div>
+                            </div>
+
+                            <!-- Instance Selection for Single Item -->
+                            <template x-if="selectedItem.instances && selectedItem.instances.length > 0">
+                                <div class="p-4 bg-white border border-gray-100 rounded-2xl shadow-sm">
+                                    <label class="text-[10px] font-black text-gray-500 uppercase mb-3 block tracking-widest">Select Specific Units</label>
+                                    <div class="flex flex-wrap gap-2 max-h-40 overflow-y-auto custom-scrollbar p-1">
+                                        <template x-for="inst in selectedItem.instances" :key="inst.id">
+                                            <div @click="toggleInstance(inst)" 
+                                                :class="isInstanceSelected(inst.id) ? 'bg-red-700 text-white border-red-800 shadow-md ring-2 ring-red-100' : 'bg-gray-50 text-gray-900 border-gray-200 hover:bg-gray-100'"
+                                                class="px-3 py-2 rounded-xl text-xs font-black border cursor-pointer transition-all">
+                                                <span x-text="inst.code"></span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                    <div class="mt-3 pt-3 border-t border-gray-50 flex justify-between items-center">
+                                        <span class="text-[9px] font-black text-indigo-700 uppercase">Selected:</span>
+                                        <span class="text-sm font-black text-indigo-900" x-text="`${selectedInstances.length} Units`"></span>
+                                    </div>
+
+                                    <!-- Hidden Inputs for Submission -->
+                                    <template x-for="inst in selectedInstances" :key="'submit-'+inst.id">
+                                        <input type="hidden" :name="`instances_${selectedItem.id}`" :value="inst.id">
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-black text-gray-900 mb-2">Quantity *</label>
+                            <input type="number" name="quantity_requested" x-model="quantity" min="1" :max="selectedItem ? selectedItem.stock : 1" required
+                                class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-red-600 focus:bg-white transition-all font-black outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-black text-gray-900 mb-2">Duration (Days)</label>
+                            <input type="number" name="borrow_duration_days" x-model="duration" min="1" max="365" required
+                                class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-red-600 focus:bg-white transition-all font-black outline-none">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-black text-gray-900 mb-2">Usage Location (Optional)</label>
+                        <input type="text" name="requested_location" x-model="location"
+                            class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-red-600 focus:bg-white transition-all font-black outline-none"
+                            placeholder="Deployment area">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-black text-gray-900 mb-2">Purpose *</label>
+                        <textarea name="purpose" x-model="purpose" rows="3" required
+                            class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-red-600 focus:bg-white transition-all font-black outline-none resize-none"
+                            placeholder="What will you use this for?"></textarea>
+                    </div>
+
+                    <div class="pt-4">
+                        <button type="submit" :disabled="!canSubmit || !{{ can_borrow|lower }}"
+                            class="w-full py-4 bg-red-600 hover:bg-red-700 text-white font-black rounded-2xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all disabled:bg-gray-200 disabled:text-gray-500 disabled:shadow-none disabled:cursor-not-allowed">
+                            <i class="fas fa-paper-plane mr-2"></i> Submit Request
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Right Column: Guidelines (7 cols) -->
+        <div class="xl:col-span-7 space-y-6">
+            <div class="bg-gray-900 rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden">
+                <i class="fas fa-info-circle absolute -right-8 -bottom-8 text-[12rem] opacity-5"></i>
+                <h3 class="text-sm font-black uppercase tracking-[0.2em] text-orange-500 mb-6 flex items-center">
+                    <span class="w-8 h-[2px] bg-orange-500 mr-3"></span> Next Steps
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="space-y-4">
+                        <div class="flex items-start">
+                            <div class="bg-red-600/20 text-red-500 w-8 h-8 rounded-lg flex items-center justify-center font-black mr-4 flex-shrink-0">1</div>
+                            <div>
+                                <h4 class="font-black text-white">Submit Request</h4>
+                                <p class="text-xs text-gray-400 mt-1">Submit your details for verification.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="bg-red-600/20 text-red-500 w-8 h-8 rounded-lg flex items-center justify-center font-black mr-4 flex-shrink-0">2</div>
+                            <div>
+                                <h4 class="font-black text-white">GSO Review</h4>
+                                <p class="text-xs text-gray-400 mt-1">Staff will check item availability.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="flex items-start">
+                            <div class="bg-red-600/20 text-red-500 w-8 h-8 rounded-lg flex items-center justify-center font-black mr-4 flex-shrink-0">3</div>
+                            <div>
+                                <h4 class="font-black text-white">Date Setting</h4>
+                                <p class="text-xs text-gray-400 mt-1">staff sets exact return deadlines.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="bg-red-600/20 text-red-500 w-8 h-8 rounded-lg flex items-center justify-center font-black mr-4 flex-shrink-0">4</div>
+                            <div>
+                                <h4 class="font-black text-white">Track Progress</h4>
+                                <p class="text-xs text-gray-400 mt-1">Follow updates in your request list.</p>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Quantity -->
-            <div>
-                <label for="{{ form.quantity_requested.id_for_label }}"
-                    class="block text-sm font-medium text-gray-700 mb-2">
-                    Quantity *
-                </label>
-                {{ form.quantity_requested }}
-                {% if form.quantity_requested.errors %}
-                <p class="mt-1 text-sm text-red-600">{{ form.quantity_requested.errors.0 }}</p>
-                {% else %}
-                <p class="mt-1 text-sm text-gray-500">How many items do you need?</p>
-                {% endif %}
-            </div>
-
-            <!-- Borrow Duration -->
-            <div>
-                <label for="{{ form.borrow_duration_days.id_for_label }}"
-                    class="block text-sm font-medium text-gray-700 mb-2">
-                    Duration (Days) *
-                </label>
-                {{ form.borrow_duration_days }}
-                {% if form.borrow_duration_days.errors %}
-                <p class="mt-1 text-sm text-red-600">{{ form.borrow_duration_days.errors.0 }}</p>
-                {% else %}
-                <p class="mt-1 text-sm text-gray-500">How many days do you need to borrow? (default: 3)</p>
-                {% endif %}
-            </div>
-
-            <!-- Purpose -->
-            <div class="md:col-span-2">
-                <label for="{{ form.purpose.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                    Purpose of Borrowing *
-                </label>
-                {{ form.requested_location }}
-                <div class="mt-3"></div>
-                {{ form.purpose }}
-                {% if form.purpose.errors %}
-                <p class="mt-1 text-sm text-red-600">{{ form.purpose.errors.0 }}</p>
-                {% else %}
-                <p class="mt-1 text-sm text-gray-500">Describe why you need to borrow this item</p>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Info Box -->
-        <div class="mt-6 p-4 bg-blue-50 border-l-4 border-blue-400 rounded">
-            <div class="flex">
-                <div class="flex-shrink-0">
-                    <i class="fas fa-info-circle text-blue-400 text-xl"></i>
-                </div>
-                <div class="ml-3">
-                    <h3 class="text-sm font-medium text-blue-800">Next Steps</h3>
-                    <div class="mt-2 text-sm text-blue-700">
-                        <ol class="list-decimal list-inside space-y-1">
-                            <li>Submit your borrow request</li>
-                            <li>GSO staff will review your request</li>
-                            <li>When approved, GSO staff will set the exact borrow date and return deadline</li>
-                            <li>Your borrowed items will appear in "My Borrowed Items"</li>
-                        </ol>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Info 1 -->
+                <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-xl flex items-start gap-4">
+                    <div class="bg-orange-100 p-4 rounded-2xl text-orange-600">
+                        <i class="fas fa-exclamation-triangle text-2xl"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-black text-gray-900">Overdue Policy</h4>
+                        <p class="text-xs text-gray-600 mt-1 font-medium italic">Borrowing is blocked if you have any unreturned items past their deadline.</p>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- Submit Buttons -->
-        <div class="mt-6 flex gap-3">
-            {% if can_borrow %}
-            <button type="submit"
-                class="inline-flex items-center px-6 py-3 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
-                <i class="fas fa-paper-plane mr-2"></i>
-                Submit Borrow Request
-            </button>
-            {% else %}
-            <button type="button" disabled
-                class="inline-flex items-center px-6 py-3 bg-indigo-600 text-white text-sm font-medium rounded-lg opacity-50 cursor-not-allowed">
-                <i class="fas fa-paper-plane mr-2"></i>
-                Submit Borrow Request
-            </button>
-            {% endif %}
-            <a href="{% url 'dashboard' %}"
-                class="inline-flex items-center px-6 py-3 bg-gray-300 text-gray-800 text-sm font-medium rounded-lg hover:bg-gray-400 transition-colors">
-                Cancel
-            </a>
-        </div>
-    </form>
-</div>
-
-<!-- Important Info -->
-<div class="mt-8 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
-    <div class="flex">
-        <div class="flex-shrink-0">
-            <i class="fas fa-exclamation-triangle text-yellow-400 text-xl"></i>
-        </div>
-        <div class="ml-3">
-            <h3 class="text-sm font-medium text-yellow-800">Important Notes</h3>
-            <div class="mt-2 text-sm text-yellow-700">
-                <ul class="list-disc list-inside space-y-1">
-                    <li>You cannot borrow items if you have overdue items. Please return them first.</li>
-                    <li>GSO staff must approve your request before you can collect the item</li>
-                    <li>You must return the item by the deadline set by GSO staff</li>
-                    <li>Late returns may prevent you from borrowing items in the future</li>
-                </ul>
+                <!-- Info 2 -->
+                <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-xl flex items-start gap-4">
+                    <div class="bg-blue-100 p-4 rounded-2xl text-blue-600">
+                        <i class="fas fa-calendar-check text-2xl"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-black text-gray-900">Return Terms</h4>
+                        <p class="text-xs text-gray-600 mt-1 font-medium italic">Items must be returned in good condition by the specified date.</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const supplySelect = document.getElementById('{{ form.supply.id_for_label }}');
-        const selectedItemInfo = document.getElementById('selected-item-info');
-        const selectedItemName = document.getElementById('selected-item-name');
-        const selectedItemType = document.getElementById('selected-item-type');
-        const availableQty = document.getElementById('available-qty');
-        const availableUnit = document.getElementById('available-unit');
-        const quantityInput = document.getElementById('{{ form.quantity_requested.id_for_label }}');
+function borrowSingle() {
+    return {
+        items: JSON.parse('{{ non_consumable_supplies|escapejs }}'),
+        searchQuery: '',
+        selectedId: '',
+        selectedItem: null,
+        selectedInstances: [],
+        open: false,
+        duration: 3,
+        quantity: 1,
+        location: '',
+        purpose: '',
 
-        // Supply data (populated from server-side queryset)
-        const supplyData = {};
+        get filteredItems() {
+            if (!this.searchQuery) return this.items.slice(0, 10);
+            const q = this.searchQuery.toLowerCase();
+            return this.items.filter(i => 
+                i.name.toLowerCase().includes(q) || 
+                i.category.toLowerCase().includes(q)
+            ).slice(0, 10);
+        },
 
-        {% for supply in form.supply.field.queryset %}
-        supplyData[{{ supply.id }}] = {
+        selectItem(item) {
+            this.selectedItem = item;
+            this.selectedId = item.id;
+            this.searchQuery = item.name;
+            this.open = false;
+            this.quantity = 1;
+            this.selectedInstances = [];
+        },
 
-        name: '{{ supply.name|escapejs }}',
-        category: '{{ supply.category.name|escapejs }}',
-        stock: {{ supply.quantity }},
-        unit: '{{ supply.unit|escapejs }}',
-        minStock: {{ supply.min_stock_level }},
-            isConsumable: {{ supply.is_consumable|yesno:'true,false' }},
-            isMaterial: {{ supply.category.is_material|yesno:'true,false' }},
-        location: '{{ supply.location|escapejs }}'
-        };
-    {% endfor %}
-
-    // Type filter buttons
-    const typeButtons = document.querySelectorAll('.type-filter-btn');
-    const supplyHelp = document.getElementById('supply-help');
-    const searchInput = document.getElementById('supply-search');
-    let currentFilter = 'equipment';
-
-    function applyFilters() {
-        const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
-
-        Array.from(supplySelect.options).forEach(opt => {
-            if (!opt.value) return; // skip placeholder
-
-            // Type filter logic
-            const dsIsMat = opt.dataset.isMaterial === '1';
-            const dsIsCons = opt.dataset.isConsumable === '1';
-            const sd = supplyData[opt.value];
-            const sdIsMat = sd ? sd.isMaterial === 'true' || sd.isMaterial === true : false;
-            const sdIsCons = sd ? sd.isConsumable === 'true' || sd.isConsumable === true : false;
-
-            const isMat = dsIsMat || sdIsMat;
-            const isCons = dsIsCons || sdIsCons;
-
-            let typeMatch = false;
-            if (currentFilter === 'equipment') {
-                typeMatch = !isCons;
-            } else if (currentFilter === 'materials') {
-                typeMatch = isMat;
-            }
-
-            // Search filter logic
-            let searchMatch = true;
-            if (searchTerm) {
-                const itemName = opt.dataset.name || '';
-                const itemCategory = opt.dataset.category || '';
-                searchMatch = itemName.includes(searchTerm) || itemCategory.includes(searchTerm);
-            }
-
-            // Apply combined filters
-            const shouldShow = typeMatch && searchMatch;
-            opt.style.display = shouldShow ? '' : 'none';
-            opt.disabled = !shouldShow;
-        });
-    }
-
-    function setActiveFilter(filter) {
-        currentFilter = filter;
-        typeButtons.forEach(b => {
-            if (b.dataset.filter === filter) {
-                b.classList.add('bg-indigo-600', 'text-white');
-                b.classList.remove('bg-white', 'text-gray-700');
+        toggleInstance(inst) {
+            const current = [...this.selectedInstances];
+            const index = current.findIndex(i => i.id === inst.id);
+            if (index > -1) {
+                current.splice(index, 1);
             } else {
-                b.classList.remove('bg-indigo-600', 'text-white');
-                b.classList.add('bg-white', 'text-gray-700');
+                current.push(inst);
             }
-        });
+            this.selectedInstances = current;
+            this.quantity = this.selectedInstances.length || 1;
+        },
 
-        // Update help text
-        supplyHelp.textContent = filter === 'equipment'
-            ? 'Only available equipment items are shown'
-            : 'Only available material items are shown';
+        isInstanceSelected(id) {
+            return this.selectedInstances.some(i => i.id === id);
+        },
 
-        applyFilters();
-    }
-
-    typeButtons.forEach(btn => {
-        btn.addEventListener('click', function () {
-            setActiveFilter(this.dataset.filter);
-            // reset selection
-            supplySelect.value = '';
-            supplySelect.dispatchEvent(new Event('change'));
-        });
-    });
-
-    // Add search input listener
-    if (searchInput) {
-        searchInput.addEventListener('input', function () {
-            applyFilters();
-            // reset selection when search changes
-            supplySelect.value = '';
-            supplySelect.dispatchEvent(new Event('change'));
-        });
-    }
-
-    // set default filter to equipment
-    setActiveFilter('equipment');
-
-    // Update equipment/material information when selection changes
-    supplySelect.addEventListener('change', function () {
-        const selectedId = this.value;
-
-        if (selectedId && supplyData[selectedId]) {
-            const supply = supplyData[selectedId];
-
-            // Update display
-            selectedItemName.textContent = supply.name;
-            selectedItemType.textContent = supply.isMaterial ? '(Material)' : '(Equipment - Non-Consumable)';
-            availableQty.textContent = supply.stock;
-            availableUnit.textContent = supply.unit || 'units';
-            // Show current storage location of the supply
-            const locEl = document.getElementById('selected-item-location');
-            if (locEl) locEl.textContent = 'Current location: ' + (supply.location || 'Unknown');
-
-            // Show item info
-            selectedItemInfo.classList.remove('hidden');
-
-            // Update quantity input max and validation
-            quantityInput.max = supply.stock;
-
-            // Add validation
-            quantityInput.addEventListener('input', function () {
-                const value = parseInt(this.value);
-                if (value > supply.stock) {
-                    this.setCustomValidity('Quantity cannot exceed available stock (' + supply.stock + ' ' + supply.unit + ')');
-                } else if (value <= 0) {
-                    this.setCustomValidity('Quantity must be greater than 0');
-                } else {
-                    this.setCustomValidity('');
-                }
-            });
-        } else {
-            // Hide item info if no selection
-            selectedItemInfo.classList.add('hidden');
+        get canSubmit() {
+            const basic = this.selectedId && this.duration > 0 && this.quantity > 0 && this.purpose.trim().length > 0;
+            if (this.selectedItem && this.selectedItem.instances && this.selectedItem.instances.length > 0) {
+                return basic && this.selectedInstances.length > 0;
+            }
+            return basic;
         }
-    });
-
-    // Trigger change event if there's a pre-selected value
-    if (supplySelect.value) {
-        supplySelect.dispatchEvent(new Event('change'));
     }
-});
+}
 </script>
+
+<style>
+@keyframes pulse-subtle {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
+.animate-pulse-subtle {
+    animation: pulse-subtle 3s ease-in-out infinite;
+}
+</style>
 {% endblock %}

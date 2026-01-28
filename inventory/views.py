@@ -4953,27 +4953,59 @@ def request_borrow_item(request):
             )
             form = BorrowRequestForm(request.POST)
         else:
-            form = BorrowRequestForm(request.POST)
             if form.is_valid():
                 supply_request = form.save(commit=False)
                 supply_request.user = request.user
                 supply_request.status = "pending"
 
-                # Extract the borrow duration from the form
+                # Extract the borrow duration and quantity
                 borrow_duration = form.cleaned_data["borrow_duration_days"]
+                quantity = form.cleaned_data["quantity_requested"]
+                supply = form.cleaned_data["supply"]
 
-                # Mark this as a borrowing request
-                supply_request.purpose = f"[BORROWING] {supply_request.purpose}\n\nBorrow Duration: {borrow_duration} days"
-                supply_request.save()
+                # Extract instance IDs if any
+                instance_ids = request.POST.getlist(f"instances_{supply.id}")
 
-                # Generate borrowing QR code
-                supply_request.generate_borrowing_qr_code()
+                if instance_ids:
+                    from .models import EquipmentInstance
+                    # If instances are selected, we might want to create individual requests 
+                    # OR just link them. The system seems to prefer individual records for instances.
+                    # Batch request view creates separate requests for each instance.
+                    
+                    batch_group_id = f"BATCH-{uuid.uuid4().hex[:8].upper()}"
+                    
+                    for inst_id in instance_ids:
+                        instance = EquipmentInstance.objects.filter(id=inst_id, status='available').first()
+                        if instance:
+                            req = SupplyRequest.objects.create(
+                                user=request.user,
+                                supply=supply,
+                                quantity_requested=1,
+                                status='pending',
+                                requested_location=supply_request.requested_location,
+                                purpose=f"[BORROWING] {supply_request.purpose}\n\nBorrow Duration: {borrow_duration} days (Unit: {instance.instance_code})",
+                                batch_group_id=batch_group_id
+                            )
+                            req.generate_borrowing_qr_code()
+                    
+                    messages.success(
+                        request,
+                        f"Borrow request for {len(instance_ids)} selected units submitted successfully.",
+                    )
+                    return redirect("request_list")
+                else:
+                    # Mark this as a borrowing request
+                    supply_request.purpose = f"[BORROWING] {supply_request.purpose}\n\nBorrow Duration: {borrow_duration} days"
+                    supply_request.save()
 
-                messages.success(
-                    request,
-                    f"Borrow request submitted successfully. GSO staff will review and approve your request.",
-                )
-                return redirect("request_detail", pk=supply_request.pk)
+                    # Generate borrowing QR code
+                    supply_request.generate_borrowing_qr_code()
+
+                    messages.success(
+                        request,
+                        f"Borrow request submitted successfully. GSO staff will review and approve your request.",
+                    )
+                    return redirect("request_detail", pk=supply_request.pk)
             else:
                 messages.error(request, "Please correct the errors below.")
     else:
@@ -4987,6 +5019,15 @@ def request_borrow_item(request):
     for s in Supply.objects.filter(quantity__gt=0, is_consumable=False).order_by(
         "name"
     ):
+        instances_data = []
+        for instance in s.instances.filter(status='available'):
+            instances_data.append({
+                'id': instance.id,
+                'code': instance.instance_code,
+                'brand': instance.brand,
+                'model': instance.model_name
+            })
+            
         supply_data = {
             "id": s.pk,
             "name": s.name,
@@ -4995,6 +5036,7 @@ def request_borrow_item(request):
             "category": s.category.name,
             "location": s.location,
             "is_consumable": False,
+            "instances": instances_data,
         }
 
         if s.category.is_material:

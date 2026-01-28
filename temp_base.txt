@@ -1,0 +1,6 @@
+﻿    <div :class="{'translate-x-0': sidebarOpen, '-translate-x-full': !sidebarOpen}"
+        class="fixed inset-y-0 left-0 z-50 w-64 sidebar-bg text-white transition-transform duration-300 ease-in-out md:translate-x-0"
+        :style="isMobile ? '' : (sidebarOpen ? 'transform: translateX(0);' : 'transform: translateX(-100%);')">
+
+        <!-- Logo/Brand -->
+        <div class="p-6 border-b border-white/20">

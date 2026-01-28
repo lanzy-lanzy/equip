@@ -1,117 +1,126 @@
-<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+<div class="glass-panel overflow-hidden border border-gray-100 shadow-sm animate-fade-in">
     {% if requests %}
     <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        ID/Batch
+        <table class="min-w-full divide-y divide-gray-100">
+            <thead>
+                <tr class="bg-gray-50/50">
+                    <th class="px-6 py-4 text-left text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                        Reference / ID
                     </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Supplies
+                    <th class="px-6 py-4 text-left text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                        Requested Items
                     </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Requested By
+                    <th class="px-6 py-4 text-left text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                        Requester
                     </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th class="px-6 py-4 text-left text-[10px] font-black text-gray-500 uppercase tracking-widest">
                         Status
                     </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th class="px-6 py-4 text-left text-[10px] font-black text-gray-500 uppercase tracking-widest">
                         Date
                     </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th class="px-6 py-4 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">
                         Actions
                     </th>
                 </tr>
             </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
+            <tbody class="divide-y divide-gray-50 bg-white">
                 {% for group in requests %}
-                <tr class="hover:bg-gray-50 transition-colors">
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-xs font-medium text-gray-500">
+                <tr class="hover:bg-gray-50/80 transition-all group">
+                    <td class="px-6 py-5 whitespace-nowrap">
+                        <div class="flex flex-col">
                             {% if group.group_id %}
-                            <span
-                                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                                <i class="fas fa-layer-group mr-1"></i>
-                                BATCH
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-black bg-red-100 text-red-700 w-fit mb-1 shadow-sm">
+                                <i class="fas fa-layer-group mr-1"></i> BATCH
                             </span>
-                            <div class="mt-1 font-mono">{{ group.group_id }}</div>
+                            <span class="font-mono text-sm font-black text-gray-900">{{ group.group_id }}</span>
                             {% else %}
-                            {{ group.items.0.request_id }}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-black bg-indigo-100 text-indigo-700 w-fit mb-1 shadow-sm">
+                                <i class="fas fa-tag mr-1"></i> SINGLE
+                            </span>
+                            <span class="font-mono text-sm font-black text-gray-900">{{ group.items.0.request_id }}</span>
                             {% endif %}
                         </div>
                     </td>
-                    <td class="px-6 py-4">
-                        <div class="space-y-1">
+                    <td class="px-6 py-5">
+                        <div class="flex flex-col gap-1.5">
                             {% for item in group.items %}
-                            <div class="text-sm">
-                                <span class="font-medium text-gray-900">{{ item.supply.name }}</span>
-                                <span class="text-gray-500">({{ item.quantity_requested }} {{ item.supply.unit }})</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-black text-gray-900 leading-tight">{{ item.supply.name }}</span>
+                                <span class="text-xs font-black text-gray-400">× {{ item.quantity_requested }}</span>
                             </div>
                             {% endfor %}
                             {% if group.is_borrowing %}
                             <div class="mt-1">
-                                <span
-                                    class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-purple-100 text-purple-800">
-                                    <i class="fas fa-hand-holding mr-1"></i>
-                                    BORROWING
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-black bg-orange-100 text-orange-700 border border-orange-200 shadow-sm">
+                                    <i class="fas fa-hand-holding-heart mr-1"></i> BORROWING
                                 </span>
                             </div>
                             {% endif %}
                         </div>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm text-gray-900">{{ group.user.username }}</div>
-                        <div class="text-sm text-gray-500">{{ group.user.department|default:"No Department" }}</div>
+                    <td class="px-6 py-5 whitespace-nowrap">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center font-black text-gray-600 border border-gray-200 text-xs">
+                                {{ group.user.username|make_list|first|upper }}
+                            </div>
+                            <div>
+                                <div class="text-sm font-black text-gray-900">{{ group.user.username }}</div>
+                                <div class="text-[10px] font-black text-gray-400 uppercase tracking-tighter">{{ group.user.department|default:"No Department" }}</div>
+                            </div>
+                        </div>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                    {% if group.status == 'pending' %}bg-yellow-100 text-yellow-800
-                                    {% elif group.status == 'approved' %}bg-blue-100 text-blue-800
-                                    {% elif group.status == 'released' %}bg-green-100 text-green-800
-                                    {% elif group.status == 'returned' %}bg-indigo-100 text-indigo-800
-                                    {% elif group.status == 'partially_returned' %}bg-purple-100 text-purple-800
-                                    {% elif group.status == 'returned_with_issues' %}bg-orange-100 text-orange-800
-                                    {% elif group.status == 'mixed' %}bg-purple-100 text-purple-800
-                                    {% else %}bg-red-100 text-red-800{% endif %}">
+                    <td class="px-6 py-5 whitespace-nowrap">
+                        <span class="inline-flex items-center px-3 py-1 rounded-xl text-[10px] font-black shadow-sm border
+                                    {% if group.status == 'pending' %}bg-amber-500 text-white border-amber-600
+                                    {% elif group.status == 'approved' %}bg-emerald-600 text-white border-emerald-700
+                                    {% elif group.status == 'released' %}bg-red-600 text-white border-red-700
+                                    {% elif group.status == 'returned' %}bg-indigo-600 text-white border-indigo-700
+                                    {% elif group.status == 'partially_returned' %}bg-purple-600 text-white border-purple-700
+                                    {% elif group.status == 'returned_with_issues' %}bg-rose-700 text-white border-rose-800
+                                    {% elif group.status == 'mixed' %}bg-slate-700 text-white border-slate-800
+                                    {% else %}bg-rose-600 text-white border-rose-700{% endif %}">
                             {% if group.status == 'returned' %}
-                                <i class="fas fa-check-circle mr-1"></i>
+                                <i class="fas fa-check-circle mr-1.5"></i>
                             {% elif group.status == 'partially_returned' %}
-                                <i class="fas fa-hourglass-half mr-1"></i>
+                                <i class="fas fa-hourglass-half mr-1.5"></i>
+                            {% elif group.status == 'released' %}
+                                <i class="fas fa-box-open mr-1.5"></i>
                             {% elif group.status == 'returned_with_issues' %}
-                                <i class="fas fa-exclamation-triangle mr-1"></i>
+                                <i class="fas fa-exclamation-triangle mr-1.5"></i>
                             {% endif %}
-                            {{ group.display_status|default:group.status|title }}
+                            {{ group.display_status|default:group.status|upper }}
                         </span>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {{ group.created_at|date:"M d, Y" }}
+                    <td class="px-6 py-5 whitespace-nowrap">
+                        <div class="text-sm font-black text-gray-900">{{ group.created_at|date:"M d, Y" }}</div>
+                        <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest">{{ group.created_at|date:"h:i A" }}</div>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div class="flex items-center space-x-2">
+                    <td class="px-6 py-5 whitespace-nowrap">
+                        <div class="flex items-center justify-center gap-2">
                             <a href="{% url 'request_detail' group.items.0.pk %}"
-                                class="text-indigo-600 hover:text-indigo-900" title="View Details">
-                                <i class="fas fa-eye text-lg"></i>
+                                class="p-2.5 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 hover:text-gray-900 transition-all shadow-sm group-hover:bg-white" title="View Details">
+                                <i class="fas fa-eye"></i>
                             </a>
 
                             {% if user.role in 'admin,gso_staff' %}
                             {% if group.status == 'pending' %}
                             <button
                                 onclick="showBulkApproveModal('{{ group.id }}', '{{ group.group_id|default:group.items.0.request_id }}', true)"
-                                class="text-green-600 hover:text-green-900" title="Approve All">
-                                <i class="fas fa-check-double text-lg"></i>
+                                class="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm" title="Approve All">
+                                <i class="fas fa-check-double"></i>
                             </button>
 
                             <button
                                 onclick="showBulkRejectModal('{{ group.id }}', '{{ group.group_id|default:group.items.0.request_id }}', true)"
-                                class="text-red-600 hover:text-red-900" title="Reject All">
-                                <i class="fas fa-times-circle text-lg"></i>
+                                class="p-2.5 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm" title="Reject All">
+                                <i class="fas fa-times"></i>
                             </button>
                             {% elif group.status == 'approved' or group.status == 'mixed' %}
                             <button
                                 onclick="showBulkReleaseModal('{{ group.id }}', '{{ group.group_id|default:group.items.0.request_id }}', true)"
-                                class="text-blue-600 hover:text-blue-900" title="Release Available">
-                                <i class="fas fa-box-open text-lg"></i>
+                                class="p-2.5 bg-red-50 text-red-600 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-sm" title="Release Available">
+                                <i class="fas fa-box-open"></i>
                             </button>
                             {% endif %}
                             {% endif %}
@@ -123,21 +132,23 @@
         </table>
     </div>
     {% else %}
-    <div class="p-8 text-center">
-        <i class="fas fa-inbox text-4xl text-gray-300 mb-4"></i>
-        <h3 class="text-lg font-medium text-gray-900 mb-2">No requests found</h3>
-        <p class="text-gray-500 mb-4">
+    <div class="p-20 text-center animate-fade-in-up">
+        <div class="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-gray-100">
+            <i class="fas fa-inbox text-4xl text-gray-300"></i>
+        </div>
+        <h3 class="text-2xl font-black text-gray-900 mb-2">No Requests Found</h3>
+        <p class="text-gray-500 font-bold mb-8 max-w-sm mx-auto">
             {% if user.role == 'department_user' %}
-            You haven't made any requests yet.
+            You haven't made any requests yet. Start by borrowing some equipment!
             {% else %}
-            No requests match your current filters.
+            Currently there are no requests matching your criteria.
             {% endif %}
         </p>
         {% if user.role == 'department_user' %}
-        <a href="{% url 'request_create' %}"
-            class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
-            <i class="fas fa-plus mr-2"></i>
-            Make First Request
+        <a href="{% url 'request_borrow_batch' %}"
+            class="inline-flex items-center px-8 py-4 bg-red-600 text-white font-black rounded-2xl hover:bg-red-700 transition-all shadow-xl shadow-red-100 group">
+            <i class="fas fa-plus mr-3 group-hover:rotate-90 transition-transform"></i>
+            Create New Request
         </a>
         {% endif %}
     </div>
@@ -146,42 +157,43 @@
 
 <!-- Bulk Approval Modal -->
 <div id="bulk-approve-modal" x-data="{ items: [], displayId: '', isGroup: false, id: '' }"
-    class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6">
+    class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 transition-all">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-8 animate-fade-in-up relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-2 bg-emerald-600"></div>
         <div class="text-center">
-            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i class="fas fa-check-double text-2xl text-green-600"></i>
+            <div class="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="fas fa-check-double text-3xl text-emerald-600"></i>
             </div>
-            <h3 class="text-xl font-bold text-gray-800 mb-2">Confirm Approval</h3>
-            <p class="text-gray-600 mb-4">
-                You are about to approve the following items in <span x-text="displayId" class="font-mono font-bold text-indigo-600"></span>
+            <h3 class="text-2xl font-black text-gray-900 mb-2 tracking-tight">Approve Request</h3>
+            <p class="text-gray-500 font-bold mb-6">
+                Confirming release for <span x-text="displayId" class="text-indigo-600"></span>
             </p>
             
             <!-- Items List -->
-            <div class="bg-gray-50 rounded-lg p-4 mb-6 text-left max-h-60 overflow-y-auto border border-gray-100">
+            <div class="bg-gray-50 rounded-2xl p-5 mb-8 text-left max-h-60 overflow-y-auto border border-gray-100 custom-scrollbar">
                 <template x-for="item in items" :key="item.id">
-                    <div class="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+                    <div class="flex justify-between items-center py-3 border-b border-gray-100 last:border-0">
                         <div>
-                            <div class="text-sm font-semibold text-gray-900" x-text="item.name"></div>
-                            <div class="text-xs text-gray-500" x-text="item.details"></div>
+                            <div class="text-sm font-black text-gray-900" x-text="item.name"></div>
+                            <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest" x-text="item.details"></div>
                         </div>
-                        <div class="text-sm font-mono text-gray-700 bg-white px-2 py-1 rounded border border-gray-200">
+                        <div class="text-xs font-black text-gray-700 bg-white px-3 py-1.5 rounded-xl border border-gray-200 shadow-sm">
                             <span x-text="item.qty"></span> <span x-text="item.unit"></span>
                         </div>
                     </div>
                 </template>
             </div>
 
-            <div class="flex space-x-3">
+            <div class="flex flex-col sm:flex-row gap-3">
                 <button onclick="closeBulkApproveModal()"
-                    class="flex-1 px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors">
-                    Cancel
+                    class="flex-1 px-6 py-4 bg-gray-100 text-gray-600 text-sm font-black rounded-2xl hover:bg-gray-200 transition-all">
+                    Dismiss
                 </button>
                 <form id="bulk-approve-form" method="post" class="flex-1">
                     {% csrf_token %}
                     <button type="submit"
-                        class="w-full px-4 py-2 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 transition-colors shadow-sm">
-                        Confirm Approval
+                        class="w-full px-6 py-4 bg-emerald-600 text-white text-sm font-black rounded-2xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100">
+                        Approve Now
                     </button>
                 </form>
             </div>
@@ -190,32 +202,33 @@
 </div>
 
 <!-- Bulk Reject Modal -->
+<div id="bulk-reject-id-container" class="hidden"></div> <!-- Dummy to avoid JS errors if needed -->
 <div id="bulk-reject-modal"
-    class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+    class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 animate-fade-in-up relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-2 bg-rose-600"></div>
         <div class="text-center">
-            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i class="fas fa-times-circle text-2xl text-red-600"></i>
+            <div class="w-20 h-20 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="fas fa-times text-3xl text-rose-600"></i>
             </div>
-            <h3 class="text-lg font-semibold text-gray-800 mb-2">Reject Group Request</h3>
-            <p class="text-gray-600 mb-4">
-                Are you sure you want to reject all items in <span id="bulk-reject-id" class="font-medium"></span>?
+            <h3 class="text-2xl font-black text-gray-900 mb-2 tracking-tight">Reject Request</h3>
+            <p class="text-gray-500 font-bold mb-6">
+                Are you sure you want to deny <span id="bulk-reject-id" class="text-indigo-600"></span>?
             </p>
-            <div class="mb-4 text-left">
-                <label for="bulk-reject-reason" class="block text-sm font-medium text-gray-700 mb-2">Reason
-                    (Optional)</label>
+            <div class="mb-8 text-left">
+                <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 ml-1">Reason for Rejection</label>
                 <textarea id="bulk-reject-reason" name="reason" rows="3"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    placeholder="Enter reason for rejection..."></textarea>
+                    class="w-full px-4 py-4 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-rose-600 focus:bg-white transition-all font-black outline-none resize-none"
+                    placeholder="Provide a brief explanation..."></textarea>
             </div>
-            <div class="flex space-x-3">
+            <div class="flex flex-col sm:flex-row gap-3">
                 <button onclick="closeBulkRejectModal()"
-                    class="flex-1 px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors">
+                    class="flex-1 px-6 py-4 bg-gray-100 text-gray-600 text-sm font-black rounded-2xl hover:bg-gray-200 transition-all">
                     Cancel
                 </button>
                 <button onclick="submitBulkReject()"
-                    class="flex-1 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors">
-                    Reject All
+                    class="flex-1 px-6 py-4 bg-rose-600 text-white text-sm font-black rounded-2xl hover:bg-rose-700 transition-all shadow-lg shadow-rose-100">
+                    Confirm Reject
                 </button>
             </div>
         </div>
@@ -224,27 +237,27 @@
 
 <!-- Bulk Release Modal -->
 <div id="bulk-release-modal"
-    class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+    class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 animate-fade-in-up relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-2 bg-indigo-600"></div>
         <div class="text-center">
-            <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i class="fas fa-box-open text-2xl text-blue-600"></i>
+            <div class="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="fas fa-box-open text-3xl text-indigo-600"></i>
             </div>
-            <h3 class="text-lg font-semibold text-gray-800 mb-2">Release Group Items</h3>
-            <p class="text-gray-600 mb-6">
-                Are you sure you want to release all approved items in <span id="bulk-release-id"
-                    class="font-medium"></span>?
+            <h3 class="text-2xl font-black text-gray-900 mb-2 tracking-tight">Release Items</h3>
+            <p class="text-gray-500 font-bold mb-8">
+                Ready to release approved items in <span id="bulk-release-id" class="text-red-600"></span> to the user?
             </p>
-            <div class="flex space-x-3">
+            <div class="flex flex-col sm:flex-row gap-3">
                 <button onclick="closeBulkReleaseModal()"
-                    class="flex-1 px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors">
-                    Cancel
+                    class="flex-1 px-6 py-4 bg-gray-100 text-gray-600 text-sm font-black rounded-2xl hover:bg-gray-200 transition-all">
+                    Not Yet
                 </button>
                 <form id="bulk-release-form" method="post" class="flex-1">
                     {% csrf_token %}
                     <button type="submit"
-                        class="w-full px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
-                        Release All
+                        class="w-full px-6 py-4 bg-indigo-600 text-white text-sm font-black rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
+                        Confirm Release
                     </button>
                 </form>
             </div>
@@ -265,22 +278,19 @@
         const items = [];
         // Extract data from the row
         const row = document.querySelector(`button[onclick*="'${id}'"]`).closest('tr');
-        const itemRows = row.querySelectorAll('td:nth-child(2) .text-sm');
+        const itemRows = row.querySelectorAll('td:nth-child(2) .flex.items-center.gap-2');
         
         itemRows.forEach(ir => {
-            const name = ir.querySelector('.font-medium').textContent.trim();
-            const qtyText = ir.querySelector('.text-gray-500').textContent.trim(); // (1 pieces)
-            const qtyStr = qtyText.replace('(', '').replace(')', '');
-            const parts = qtyStr.split(' ');
-            const qty = parts[0];
-            const unit = parts.slice(1).join(' ');
+            const name = ir.querySelector('.text-sm.font-black').textContent.trim();
+            const qtyText = ir.querySelector('.text-xs.font-black').textContent.trim(); // × 1
+            const qty = qtyText.replace('× ', '');
             
             items.push({
                 id: Math.random(),
                 name: name,
                 qty: qty,
-                unit: unit,
-                details: row.querySelector('td:nth-child(2) .bg-purple-100') ? 'Borrowing Request' : 'Supply Request'
+                unit: '', // Unit is usually included in name or handled by stock unit, keeping simple
+                details: row.querySelector('td:nth-child(2) .bg-orange-100') ? 'Borrowing Request' : 'Supply Request'
             });
         });
         
