@@ -1,0 +1,220 @@
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    {% if supplies %}
+        {% if user.role in 'admin,gso_staff' %}
+        <!-- Bulk Actions -->
+        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+            <div class="flex items-center">
+                <input type="checkbox" id="select-all" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                <label for="select-all" class="ml-2 text-sm text-gray-700">Select all</label>
+            </div>
+            <div>
+                <button id="bulk-qr-btn" 
+                        class="inline-flex items-center px-3 py-1 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled>
+                    <i class="fas fa-qrcode mr-1"></i>
+                    Generate QR Codes
+                </button>
+            </div>
+        </div>
+        {% endif %}
+        
+        <form id="bulk-qr-form" method="post" action="{% url 'generate_qr_codes_bulk' %}">
+            {% csrf_token %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            {% if user.role in 'admin,gso_staff' %}
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <span class="sr-only">Select</span>
+                            </th>
+                            {% endif %}
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Supply
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Category
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Stock
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Location
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Actions
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for supply in supplies %}
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                {% if user.role in 'admin,gso_staff' %}
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <input type="checkbox" 
+                                           name="supply_ids" 
+                                           value="{{ supply.id }}" 
+                                           class="supply-checkbox rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                </td>
+                                {% endif %}
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="flex-shrink-0 h-10 w-10">
+                                            <div class="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center">
+                                                <i class="fas fa-box text-gray-400"></i>
+                                            </div>
+                                        </div>
+                                        <div class="ml-4">
+                                            <div class="text-sm font-medium text-gray-900">
+                                                <a href="{% url 'supply_detail' supply.pk %}" class="hover:text-indigo-600">
+                                                    {{ supply.name }}
+                                                </a>
+                                            </div>
+                                            <div class="text-sm text-gray-500">
+                                                {{ supply.description|truncatewords:5 }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                        {{ supply.category.name }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <span class="text-sm font-medium 
+                                            {% if supply.stock_status == 'out_of_stock' %}stock-out
+                                            {% elif supply.stock_status == 'low_stock' %}stock-low
+                                            {% else %}stock-good{% endif %}">
+                                            {{ supply.quantity }} {{ supply.unit }}
+                                        </span>
+                                        {% if supply.is_low_stock %}
+                                            <i class="fas fa-exclamation-triangle ml-2 text-yellow-500" title="Low Stock"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-xs text-gray-500">
+                                        Min: {{ supply.min_stock_level }}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {{ supply.location }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    <div class="flex items-center space-x-2">
+                                        <a href="{% url 'supply_detail' supply.pk %}" 
+                                           class="text-indigo-600 hover:text-indigo-900"
+                                           title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        
+                                        {% if user.role in 'admin,gso_staff' %}
+                                            <a href="{% url 'supply_edit' supply.pk %}" 
+                                               class="text-yellow-600 hover:text-yellow-900"
+                                               title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        {% endif %}
+                                        
+                                        <button data-supply-id="{{ supply.id }}" class="show-qr-btn text-green-600 hover:text-green-900" title="Show QR Code" type="button">
+                                            <i class="fas fa-qrcode"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </form>
+        
+        <!-- Results Summary -->
+        <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
+            <p class="text-sm text-gray-600">
+                Showing {{ supplies|length }} of {{ supplies.count }} supplies
+                {% if search or category_filter or stock_filter %}
+                    <span class="ml-2">(filtered results)</span>
+                {% endif %}
+            </p>
+        </div>
+    {% else %}
+        <div class="p-8 text-center">
+            <i class="fas fa-inbox text-4xl text-gray-300 mb-4"></i>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">No supplies found</h3>
+            <p class="text-gray-500 mb-4">Try adjusting your search or filters</p>
+            {% if user.role in 'admin,gso_staff' %}
+                <a href="{% url 'supply_create' %}" 
+                   class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+                    <i class="fas fa-plus mr-2"></i>
+                    Add First Supply
+                </a>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+<script>
+// Bulk selection functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('select-all');
+    const supplyCheckboxes = document.querySelectorAll('.supply-checkbox');
+    const bulkQrBtn = document.getElementById('bulk-qr-btn');
+    const bulkQrForm = document.getElementById('bulk-qr-form');
+    const showQrButtons = document.querySelectorAll('.show-qr-btn');
+    
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            supplyCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateBulkButtonState();
+        });
+    }
+    
+    supplyCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateBulkButtonState);
+    });
+    
+    showQrButtons.forEach(button => {
+        button.addEventListener('click', function(event) {
+            event.stopPropagation(); // Prevent event from bubbling up
+            const supplyId = this.getAttribute('data-supply-id');
+            showQRCode(supplyId);
+        });
+    });
+    
+    if (bulkQrBtn) {
+        bulkQrBtn.addEventListener('click', function() {
+            bulkQrForm.submit();
+        });
+    }
+    
+    function updateBulkButtonState() {
+        const checkedCount = document.querySelectorAll('.supply-checkbox:checked').length;
+        if (bulkQrBtn) {
+            bulkQrBtn.disabled = checkedCount === 0;
+            bulkQrBtn.innerHTML = checkedCount > 0 
+                ? `<i class="fas fa-qrcode mr-1"></i> Generate QR Codes (${checkedCount})` 
+                : '<i class="fas fa-qrcode mr-1"></i> Generate QR Codes';
+        }
+    }
+    
+    // Fix for HTMX sending undefined values
+    // Add event listeners to all filter elements to prevent undefined values
+    const filterElements = document.querySelectorAll('[name="category"], [name="stock"], [name="sort"], [name="order"]');
+    
+    filterElements.forEach(element => {
+        // Set initial value to empty string if it's undefined
+        if (element.value === 'undefined') {
+            element.value = '';
+        }
+        
+        element.addEventListener('change', function() {
+            // If the value is empty or undefined, set it to empty string
+            if (this.value === 'undefined' || this.value === null) {
+                this.value = '';
+            }
+        });
+    });
+});
+</script>

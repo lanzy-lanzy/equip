@@ -1,0 +1,216 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Lost/Damaged Items Management - Smart Supply Management System{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="mb-8">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Lost/Damaged Items Management</h1>
+            <p class="text-gray-600">Track and manage inventory adjustments for lost or damaged items</p>
+        </div>
+        <div class="mt-4 md:mt-0">
+            <a href="{% url 'stock_adjustment_create' %}"
+                class="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors">
+                <i class="fas fa-plus mr-2"></i>
+                Record Adjustment
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-600">Total Adjustments</p>
+                <p class="text-3xl font-bold text-gray-900 mt-2">{{ transactions.paginator.count|intcomma }}</p>
+            </div>
+            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <i class="fas fa-chart-bar text-2xl text-blue-600"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-600">Lost Items</p>
+                <p class="text-3xl font-bold text-red-600 mt-2">{{ lost_count|intcomma }}</p>
+            </div>
+            <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                <i class="fas fa-ban text-2xl text-red-600"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-600">Damaged Items</p>
+                <p class="text-3xl font-bold text-yellow-600 mt-2">{{ damaged_count|intcomma }}</p>
+            </div>
+            <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                <i class="fas fa-exclamation-triangle text-2xl text-yellow-600"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <!-- Search -->
+        <div class="md:col-span-2">
+            <label for="search" class="block text-sm font-medium text-gray-700 mb-2">Search</label>
+            <form method="get" class="flex gap-2">
+                <input type="text" name="search" value="{{ search }}"
+                    placeholder="Search by supply name, reason, or recorded by..."
+                    class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                    <i class="fas fa-search"></i>
+                </button>
+            </form>
+        </div>
+
+        <!-- Type Filter -->
+        <div>
+            <label for="type" class="block text-sm font-medium text-gray-700 mb-2">Type</label>
+            <form method="get" class="flex gap-2">
+                <select name="type" onchange="this.form.submit()"
+                    class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    <option value="">All Types</option>
+                    <option value="lost" {% if type_filter == 'lost' %}selected{% endif %}>Lost Items</option>
+                    <option value="damaged" {% if type_filter == 'damaged' %}selected{% endif %}>Damaged Items</option>
+                </select>
+                {% if supply_filter %}<input type="hidden" name="supply" value="{{ supply_filter }}">{% endif %}
+                {% if search %}<input type="hidden" name="search" value="{{ search }}">{% endif %}
+            </form>
+        </div>
+
+        <!-- Supply Filter -->
+        <div>
+            <label for="supply" class="block text-sm font-medium text-gray-700 mb-2">Supply</label>
+            <form method="get" class="flex gap-2">
+                <select name="supply" onchange="this.form.submit()"
+                    class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    <option value="">All Supplies</option>
+                    {% for supply in supplies %}
+                    <option value="{{ supply.id }}" {% if supply_filter|stringformat:"s" == supply.id|stringformat:"s" %}selected{% endif %}>
+                        {{ supply.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+                {% if type_filter %}<input type="hidden" name="type" value="{{ type_filter }}">{% endif %}
+                {% if search %}<input type="hidden" name="search" value="{{ search }}">{% endif %}
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Adjustments Table -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    {% if transactions %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supply Item</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Recorded By</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for transaction in transactions %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if transaction.transaction_type == 'lost' %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            <i class="fas fa-ban mr-1"></i>Lost
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                            <i class="fas fa-exclamation-triangle mr-1"></i>Damaged
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">
+                            <a href="{% url 'supply_detail' transaction.supply.pk %}" class="hover:text-indigo-600">
+                                {{ transaction.supply.name }}
+                            </a>
+                        </div>
+                        <div class="text-sm text-gray-500">{{ transaction.supply.category.name }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-semibold text-red-600">{{ transaction.quantity }} {{ transaction.supply.unit }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">{{ transaction.performed_by.get_full_name|default:transaction.performed_by.username }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">{{ transaction.created_at|date:"M d, Y" }}</div>
+                        <div class="text-xs text-gray-500">{{ transaction.created_at|time:"H:i" }}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm text-gray-600 max-w-xs">
+                            {{ transaction.reason|truncatewords:10 }}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <a href="{% url 'stock_adjustment_detail' transaction.pk %}"
+                            class="inline-flex items-center px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors">
+                            <i class="fas fa-eye mr-1"></i>View
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if transactions.has_other_pages %}
+    <div class="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+        <div class="text-sm text-gray-600">
+            Page {{ transactions.number }} of {{ transactions.paginator.num_pages }}
+        </div>
+        <div class="flex gap-2">
+            {% if transactions.has_previous %}
+            <a href="?page=1{% if supply_filter %}&supply={{ supply_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if search %}&search={{ search }}{% endif %}"
+                class="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50">First</a>
+            <a href="?page={{ transactions.previous_page_number }}{% if supply_filter %}&supply={{ supply_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if search %}&search={{ search }}{% endif %}"
+                class="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50">Previous</a>
+            {% endif %}
+            
+            {% if transactions.has_next %}
+            <a href="?page={{ transactions.next_page_number }}{% if supply_filter %}&supply={{ supply_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if search %}&search={{ search }}{% endif %}"
+                class="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50">Next</a>
+            <a href="?page={{ transactions.paginator.num_pages }}{% if supply_filter %}&supply={{ supply_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if search %}&search={{ search }}{% endif %}"
+                class="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50">Last</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="p-12 text-center">
+        <i class="fas fa-inbox text-4xl text-gray-300 mb-4"></i>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">No adjustments found</h3>
+        <p class="text-gray-500 mb-4">No stock adjustments have been recorded yet</p>
+        <a href="{% url 'stock_adjustment_create' %}"
+            class="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors">
+            <i class="fas fa-plus mr-2"></i>
+            Record First Adjustment
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

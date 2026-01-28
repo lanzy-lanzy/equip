@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Most Requested & Borrowed Items{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Most Requested & Borrowed Items</h1>
+        <p class="text-gray-600">Track the most popular items across all users</p>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Filters & Export</h3>
+        <form method="get" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
+                    <select name="date_filter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="all" {% if date_filter == 'all' %}selected{% endif %}>All Time</option>
+                        <option value="today" {% if date_filter == 'today' %}selected{% endif %}>Today</option>
+                        <option value="week" {% if date_filter == 'week' %}selected{% endif %}>This Week</option>
+                        <option value="month" {% if date_filter == 'month' %}selected{% endif %}>This Month</option>
+                        <option value="year" {% if date_filter == 'year' %}selected{% endif %}>This Year</option>
+                        <option value="custom" {% if date_filter == 'custom' %}selected{% endif %}>Custom Range</option>
+                    </select>
+                </div>
+
+                {% if date_filter == 'custom' %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                    <input type="date" name="start_date" value="{{ start_date }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                    <input type="date" name="end_date" value="{{ end_date }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                {% endif %}
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                    <input type="text" name="search" value="{{ search }}" placeholder="Search items..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+
+            <div class="flex gap-2">
+                <button type="submit" class="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <i class="fas fa-filter"></i>
+                    <span>Apply Filters</span>
+                </button>
+                <a href="?" class="inline-flex items-center space-x-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors">
+                    <i class="fas fa-redo"></i>
+                    <span>Reset</span>
+                </a>
+            </div>
+        </form>
+
+        <!-- Export Buttons -->
+        <div class="mt-4 flex gap-2 border-t pt-4">
+            <button onclick="exportTable('csv')" class="inline-flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                <i class="fas fa-download"></i>
+                <span>Download CSV</span>
+            </button>
+            <button onclick="exportTable('pdf')" class="inline-flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                <i class="fas fa-file-pdf"></i>
+                <span>Download PDF</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Items Table -->
+    <div class="bg-white rounded-lg shadow">
+        <div class="p-6 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">Most Requested & Borrowed Items ({{ items|length }})</h3>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table id="itemsTable" class="w-full">
+                <thead>
+                    <tr class="border-b border-gray-200 bg-gray-50">
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">Item Name</th>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">Category</th>
+                        <th class="px-6 py-3 text-center text-sm font-semibold text-gray-900">Current Stock</th>
+                        <th class="px-6 py-3 text-center text-sm font-semibold text-gray-900">Request Count</th>
+                        <th class="px-6 py-3 text-center text-sm font-semibold text-gray-900">Total Qty Requested</th>
+                        <th class="px-6 py-3 text-center text-sm font-semibold text-gray-900">Borrow Count</th>
+                        <th class="px-6 py-3 text-center text-sm font-semibold text-gray-900">Total Qty Borrowed</th>
+                        <th class="px-6 py-3 text-center text-sm font-semibold text-gray-900">Total Activity</th>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr class="border-b border-gray-200 hover:bg-gray-50 transition-colors">
+                        <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ item.name }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-600">{{ item.category|default:"Uncategorized" }}</td>
+                        <td class="px-6 py-4 text-center">
+                            <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 text-gray-700 font-semibold text-sm">
+                                {{ item.current_quantity }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            {% if item.request_count > 0 %}
+                            <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-semibold text-sm">
+                                {{ item.request_count }}
+                            </span>
+                            {% else %}
+                            <span class="text-gray-400">0</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-center text-sm text-gray-600">{{ item.total_quantity_requested }}</td>
+                        <td class="px-6 py-4 text-center">
+                            {% if item.borrow_count > 0 %}
+                            <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-100 text-green-700 font-semibold text-sm">
+                                {{ item.borrow_count }}
+                            </span>
+                            {% else %}
+                            <span class="text-gray-400">0</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-center text-sm text-gray-600">{{ item.total_quantity_borrowed }}</td>
+                        <td class="px-6 py-4 text-center">
+                            <span class="inline-flex items-center justify-center px-3 py-1 bg-purple-100 text-purple-700 rounded-full font-semibold text-sm">
+                                {{ item.request_count|add:item.borrow_count }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-sm">
+                            <a href="{% url 'supply_detail' item.supply_id %}" class="text-blue-600 hover:text-blue-700">View Details</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="px-6 py-8 text-center text-gray-500">
+                            <i class="fas fa-inbox text-3xl mb-3 text-gray-300"></i>
+                            <p>No items found in this period</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+function exportTable(format) {
+    const params = new URLSearchParams(window.location.search);
+    params.append('export', format);
+    
+    if (format === 'csv') {
+        // Create CSV from table
+        const csv = [];
+        const headers = [];
+        document.querySelectorAll('#itemsTable th').forEach(th => {
+            headers.push(th.textContent.trim());
+        });
+        csv.push(headers.join(','));
+        
+        document.querySelectorAll('#itemsTable tbody tr').forEach(row => {
+            const cols = [];
+            row.querySelectorAll('td').forEach((td, idx) => {
+                if (idx < 8) { // Skip action column
+                    cols.push('"' + td.textContent.trim().replace(/"/g, '""') + '"');
+                }
+            });
+            csv.push(cols.join(','));
+        });
+        
+        const csvContent = "data:text/csv;charset=utf-8," + encodeURIComponent(csv.join('\n'));
+        const link = document.createElement('a');
+        link.setAttribute('href', csvContent);
+        link.setAttribute('download', 'most_requested_items_{{ date_filter }}.csv');
+        link.click();
+    } else if (format === 'pdf') {
+        // Note: For PDF export, you might want to use a library like jsPDF or implement server-side
+        alert('PDF export requires server-side implementation. You can download CSV instead.');
+    }
+}
+</script>
+{% endblock %}

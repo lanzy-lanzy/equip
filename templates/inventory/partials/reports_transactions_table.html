@@ -1,0 +1,63 @@
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold text-gray-800">Inventory Transactions Report</h2>
+        <div class="flex items-center gap-4">
+            <span class="text-sm text-gray-600">{{ filtered_transactions.count }} transaction(s)</span>
+            <div class="flex gap-2">
+                <a href="{% url 'export_transactions_csv' %}?search={{ search_query }}&date_from={{ date_from }}&date_to={{ date_to %}" 
+                   class="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded text-xs font-medium transition-colors"
+                   title="Download as CSV">
+                    <i class="fas fa-download"></i>CSV
+                </a>
+                <a href="{% url 'export_transactions_pdf' %}?search={{ search_query }}&date_from={{ date_from }}&date_to={{ date_to }}" 
+                   class="inline-flex items-center gap-1 px-3 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded text-xs font-medium transition-colors"
+                   title="Download as PDF">
+                    <i class="fas fa-download"></i>PDF
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Table -->
+    <div class="overflow-x-auto">
+        <table id="transactions-table" class="w-full text-sm display">
+            <thead class="bg-gray-50 border-b border-gray-200">
+                <tr>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Supply</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Type</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Quantity</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Previous Qty</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-700">New Qty</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Reason</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Performed By</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Created At</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for transaction in filtered_transactions %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-4 py-3 text-gray-900 font-medium">{{ transaction.supply.name }}</td>
+                    <td class="px-4 py-3">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                            {% if transaction.transaction_type == 'in' %}bg-green-100 text-green-800
+                            {% elif transaction.transaction_type == 'out' %}bg-red-100 text-red-800
+                            {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                            {{ transaction.get_transaction_type_display }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-gray-700">{{ transaction.quantity }}</td>
+                    <td class="px-4 py-3 text-gray-700">{{ transaction.previous_quantity }}</td>
+                    <td class="px-4 py-3 text-gray-700">{{ transaction.new_quantity }}</td>
+                    <td class="px-4 py-3 text-gray-700">{{ transaction.reason|truncatewords:10 }}</td>
+                    <td class="px-4 py-3 text-gray-700">{{ transaction.performed_by.username }}</td>
+                    <td class="px-4 py-3 text-gray-700">{{ transaction.created_at|date:"M d, Y H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="px-4 py-8 text-center text-gray-500">No transactions found matching the filters</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

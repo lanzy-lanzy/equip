@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+
+{% block title %}Record Stock Adjustment - Smart Supply Management System{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav class="flex mb-6" aria-label="Breadcrumb">
+    <ol class="inline-flex items-center space-x-1 md:space-x-3">
+        <li class="inline-flex items-center">
+            <a href="{% url 'dashboard' %}" class="text-gray-700 hover:text-indigo-600 inline-flex items-center">
+                <i class="fas fa-home mr-2"></i>
+                Dashboard
+            </a>
+        </li>
+        <li>
+            <div class="flex items-center">
+                <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
+                <a href="{% url 'stock_adjustment_list' %}" class="text-gray-700 hover:text-indigo-600">Lost/Damaged Items</a>
+            </div>
+        </li>
+        <li>
+            <div class="flex items-center">
+                <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
+                <span class="text-gray-500">Record Adjustment</span>
+            </div>
+        </li>
+    </ol>
+</nav>
+
+<!-- Page Header -->
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-800 mb-2">Record Stock Adjustment</h1>
+    <p class="text-gray-600">Document lost or damaged items to adjust inventory</p>
+</div>
+
+<!-- Form -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden max-w-2xl">
+    <form method="post" class="space-y-0">
+        {% csrf_token %}
+        
+        <!-- Section 1: Adjustment Details -->
+        <div class="border-b border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-6 flex items-center">
+                <i class="fas fa-info-circle text-indigo-600 mr-3"></i>
+                Adjustment Details
+            </h2>
+            
+            <div class="space-y-6">
+                <!-- Type Selection -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-4">
+                        Adjustment Type <span class="text-red-500">*</span>
+                    </label>
+                    <div class="space-y-3">
+                        {% for value, label in form.adjustment_type.field.choices %}
+                        <label class="flex items-start p-4 border-2 border-gray-300 rounded-lg hover:border-red-400 hover:bg-red-50 cursor-pointer transition-all"
+                               for="{{ form.adjustment_type.id_for_label }}_{{ forloop.counter0 }}">
+                            <input type="radio" 
+                                   name="{{ form.adjustment_type.name }}"
+                                   value="{{ value }}"
+                                   id="{{ form.adjustment_type.id_for_label }}_{{ forloop.counter0 }}"
+                                   class="w-5 h-5 text-red-600 mt-1 cursor-pointer"
+                                   {% if form.adjustment_type.value == value|stringformat:"s" %}checked{% endif %}>
+                            <div class="ml-4 flex-1">
+                                <p class="text-sm font-semibold text-gray-800">{{ label }}</p>
+                            </div>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    {% if form.adjustment_type.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.adjustment_type.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Supply Selection -->
+                <div>
+                    <label for="{{ form.supply.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        Supply Item <span class="text-red-500">*</span>
+                    </label>
+                    {{ form.supply }}
+                    {% if form.supply.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.supply.errors.0 }}</p>
+                    {% endif %}
+                    <p class="mt-2 text-xs text-gray-500">Select the item that was lost or damaged</p>
+                </div>
+
+                <!-- Quantity -->
+                <div>
+                    <label for="{{ form.quantity.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        Quantity Affected <span class="text-red-500">*</span>
+                    </label>
+                    {{ form.quantity }}
+                    {% if form.quantity.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.quantity.errors.0 }}</p>
+                    {% endif %}
+                    <p class="mt-2 text-xs text-gray-500">Number of items to adjust</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: Details -->
+        <div class="border-b border-gray-200 p-6 bg-gray-50">
+            <h2 class="text-lg font-semibold text-gray-800 mb-6 flex items-center">
+                <i class="fas fa-file-alt text-indigo-600 mr-3"></i>
+                Details
+            </h2>
+            <div>
+                <label for="{{ form.reason.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                    Description <span class="text-red-500">*</span>
+                </label>
+                {{ form.reason }}
+                {% if form.reason.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.reason.errors.0 }}</p>
+                {% endif %}
+                <p class="mt-2 text-xs text-gray-500">{{ form.reason.field.help_text }}</p>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-6 bg-gray-50">
+            <div class="flex gap-3 flex-1">
+                <button type="submit" 
+                        class="flex-1 sm:flex-none inline-flex items-center justify-center px-6 py-3 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors shadow-sm">
+                    <i class="fas fa-check mr-2"></i>
+                    Record Adjustment
+                </button>
+                
+                <a href="{% url 'stock_adjustment_list' %}"
+                   class="flex-1 sm:flex-none inline-flex items-center justify-center px-6 py-3 bg-white text-gray-700 text-sm font-semibold border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-colors shadow-sm">
+                    <i class="fas fa-times mr-2"></i>
+                    Cancel
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Help Section -->
+<div class="mt-8 bg-blue-50 border border-blue-200 rounded-xl p-6">
+    <h3 class="text-sm font-semibold text-blue-900 mb-3 flex items-center">
+        <i class="fas fa-lightbulb text-blue-600 mr-2"></i>
+        Tips
+    </h3>
+    <ul class="space-y-2 text-sm text-blue-800">
+        <li>• Be specific in the description to help track the reason for adjustment</li>
+        <li>• Record adjustments promptly to maintain accurate inventory</li>
+        <li>• Lost items: Items that went missing from storage</li>
+        <li>• Damaged items: Items that are no longer usable due to damage</li>
+    </ul>
+</div>
+
+{% endblock %}

@@ -1,0 +1,379 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Categories - Smart Supply Management System{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="mb-8">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Manage Categories</h1>
+            <p class="text-gray-600">Create, edit, and delete supply categories</p>
+        </div>
+        <div class="mt-4 md:mt-0">
+            <a href="{% url 'category_create' %}" 
+               class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+                <i class="fas fa-plus mr-2"></i>
+                Add New Category
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Categories Table -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    {% if categories_with_count %}
+        <!-- Bulk Actions -->
+        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+            <div class="flex items-center">
+                <input type="checkbox" id="select-all" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                <label for="select-all" class="ml-2 text-sm text-gray-700">Select all</label>
+                <span id="selection-count" class="ml-4 text-sm text-gray-600"></span>
+            </div>
+            <button id="bulk-delete-btn" 
+                    class="inline-flex items-center px-3 py-1 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled>
+                <i class="fas fa-trash mr-1"></i>
+                Delete Selected
+            </button>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <span class="sr-only">Select</span>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Category Name
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Description
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Supplies
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actions
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for item in categories_with_count %}
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <input type="checkbox" 
+                                       name="category_ids" 
+                                       value="{{ item.category.id }}" 
+                                       class="category-checkbox rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center mr-4">
+                                        <i class="fas fa-folder text-indigo-600"></i>
+                                    </div>
+                                    <div class="text-sm font-medium text-gray-900">
+                                        {{ item.category.name }}
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <p class="text-sm text-gray-600 max-w-xs truncate">
+                                    {{ item.category.description|default:"No description" }}
+                                </p>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <button type="button" 
+                                        class="category-supplies-btn inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"
+                                        data-category-id="{{ item.category.id }}"
+                                        data-category-name="{{ item.category.name|escapejs }}"
+                                        title="View supplies in {{ item.category.name }}">
+                                    {{ item.supply_count }} item{{ item.supply_count|pluralize }}
+                                </button>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <div class="flex items-center space-x-2">
+                                    <a href="{% url 'category_edit' item.category.pk %}" 
+                                       class="text-yellow-600 hover:text-yellow-900"
+                                       title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    
+                                    {% if item.supply_count == 0 %}
+                                    <a href="{% url 'category_delete' item.category.pk %}" 
+                                       class="text-red-600 hover:text-red-900"
+                                       title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                    {% else %}
+                                    <button disabled title="Cannot delete - contains supplies" class="text-gray-400 cursor-not-allowed">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="p-8 text-center">
+            <i class="fas fa-folder-open text-4xl text-gray-300 mb-4"></i>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">No categories yet</h3>
+            <p class="text-gray-500 mb-4">Create your first supply category to get started</p>
+            <a href="{% url 'category_create' %}" 
+               class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+                <i class="fas fa-plus mr-2"></i>
+                Create First Category
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+<!-- CSRF Token for AJAX requests -->
+{% csrf_token %}
+
+<script>
+// Bulk selection and actions functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('select-all');
+    const categoryCheckboxes = document.querySelectorAll('.category-checkbox');
+    const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
+    const selectionCount = document.getElementById('selection-count');
+    
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            categoryCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateBulkButtonState();
+        });
+    }
+    
+    categoryCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateBulkButtonState);
+    });
+    
+    if (bulkDeleteBtn) {
+        bulkDeleteBtn.addEventListener('click', function() {
+            const selectedIds = getSelectedCategoryIds();
+            if (selectedIds.length > 0) {
+                showDeleteConfirmationModal(selectedIds);
+            }
+        });
+    }
+    
+    function updateBulkButtonState() {
+        const checkedCount = document.querySelectorAll('.category-checkbox:checked').length;
+        
+        // Update selection count
+        if (selectionCount) {
+            if (checkedCount > 0) {
+                selectionCount.textContent = `${checkedCount} selected`;
+            } else {
+                selectionCount.textContent = '';
+            }
+        }
+        
+        // Update button state
+        if (bulkDeleteBtn) {
+            bulkDeleteBtn.disabled = checkedCount === 0;
+            bulkDeleteBtn.innerHTML = checkedCount > 0 
+                ? `<i class="fas fa-trash mr-1"></i> Delete Selected (${checkedCount})` 
+                : '<i class="fas fa-trash mr-1"></i> Delete Selected';
+        }
+    }
+    
+    function getSelectedCategoryIds() {
+        return Array.from(document.querySelectorAll('.category-checkbox:checked'))
+            .map(checkbox => checkbox.value);
+    }
+    
+    function showDeleteConfirmationModal(categoryIds) {
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+        modal.id = 'delete-modal';
+        
+        modal.innerHTML = `
+            <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-exclamation-triangle text-2xl text-red-600"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Confirm Bulk Deletion</h3>
+                    <p class="text-gray-600 mb-4">
+                        Are you sure you want to delete <strong>${categoryIds.length}</strong> 
+                        category(ies)? This action cannot be undone.
+                    </p>
+                    
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4 text-left">
+                        <label class="flex items-start cursor-pointer">
+                            <input type="checkbox" id="force-delete-bulk" 
+                                   class="mt-1 rounded border-yellow-300 text-red-600">
+                            <span class="ml-2">
+                                <span class="font-semibold text-yellow-900 text-sm block">Force delete categories with supplies</span>
+                                <span class="text-yellow-800 text-xs">Will also delete all supplies in these categories</span>
+                            </span>
+                        </label>
+                    </div>
+                    
+                    <div class="flex space-x-3">
+                        <button onclick="document.getElementById('delete-modal').remove()" 
+                                class="flex-1 px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors">
+                            Cancel
+                        </button>
+                        <button id="confirm-delete-btn" 
+                                class="flex-1 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors">
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Close modal on outside click
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.remove();
+            }
+        });
+        
+        // Handle delete confirmation
+        document.getElementById('confirm-delete-btn').addEventListener('click', async function() {
+            const forceDelete = document.getElementById('force-delete-bulk').checked;
+            modal.remove();
+            await deleteBulkCategories(categoryIds, forceDelete);
+        });
+    }
+    
+    async function deleteBulkCategories(categoryIds, forceDelete = false) {
+        try {
+            const response = await fetch('{% url "bulk_delete_categories" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                },
+                body: JSON.stringify({
+                    category_ids: categoryIds,
+                    force_delete: forceDelete
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Show success message
+                const message = document.createElement('div');
+                message.className = 'fixed top-4 right-4 bg-green-50 border border-green-200 text-green-800 px-6 py-4 rounded-lg shadow-lg z-50 flex items-center';
+                message.innerHTML = `<i class="fas fa-check-circle mr-3 text-green-600"></i> ${data.message}`;
+                document.body.appendChild(message);
+                
+                // Show warning if some categories couldn't be deleted
+                if (data.error_message) {
+                    setTimeout(() => {
+                        const warning = document.createElement('div');
+                        warning.className = 'fixed top-20 right-4 bg-yellow-50 border border-yellow-200 text-yellow-800 px-6 py-4 rounded-lg shadow-lg z-50 flex items-start max-w-sm';
+                        warning.innerHTML = `<i class="fas fa-exclamation-circle mr-3 text-yellow-600 mt-0.5 flex-shrink-0"></i> <p>${data.error_message}</p>`;
+                        document.body.appendChild(warning);
+                        
+                        setTimeout(() => warning.remove(), 5000);
+                    }, 500);
+                }
+                
+                // Reload page after 1.5 seconds
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                alert('Error: ' + (data.error || 'Failed to delete categories'));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error deleting categories: ' + error.message);
+        }
+    }
+});
+</script>
+
+<!-- Category supplies modal and JS -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const btns = document.querySelectorAll('.category-supplies-btn');
+    if (!btns || btns.length === 0) return;
+
+    const apiTemplate = "{% url 'get_category_supplies_api' 0 %}"; // will replace '0' with category id
+
+    btns.forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const categoryId = this.dataset.categoryId;
+            const categoryName = this.dataset.categoryName || '';
+            const url = apiTemplate.replace('0', categoryId);
+
+            // show loading modal
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+            modal.id = 'category-supplies-modal';
+            modal.innerHTML = `
+                <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-800">Supplies in ${categoryName}</h3>
+                        <button id="close-cat-modal" class="text-gray-500 hover:text-gray-800">&times;</button>
+                    </div>
+                    <div id="cat-supplies-body" class="text-sm text-gray-700">
+                        <p class="text-gray-500">Loading...</p>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            // close handlers
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) this.remove();
+            });
+            document.getElementById('close-cat-modal').addEventListener('click', function() {
+                modal.remove();
+            });
+
+            try {
+                const resp = await fetch(url, {credentials: 'same-origin', headers: {'X-Requested-With': 'XMLHttpRequest'}});
+                const data = await resp.json();
+                const body = document.getElementById('cat-supplies-body');
+                if (!body) return;
+
+                if (data.success && data.supplies && data.supplies.length > 0) {
+                    const list = document.createElement('div');
+                    list.className = 'space-y-3';
+                    data.supplies.forEach(s => {
+                        const row = document.createElement('div');
+                        row.className = 'flex items-center justify-between p-2 border rounded-lg';
+                        row.innerHTML = `
+                            <div>
+                                <a href="${s.detail_url}" class="text-blue-600 hover:underline font-medium">${s.name}</a>
+                                <div class="text-xs text-gray-500">${s.quantity} ${s.unit}</div>
+                            </div>
+                            <div class="text-sm text-gray-600">ID: ${s.id}</div>
+                        `;
+                        list.appendChild(row);
+                    });
+                    body.innerHTML = '';
+                    body.appendChild(list);
+                } else if (data.success && data.supplies && data.supplies.length === 0) {
+                    body.innerHTML = '<p class="text-gray-600">No supplies in this category.</p>';
+                } else {
+                    body.innerHTML = `<p class="text-red-600">Error: ${data.error || 'Unable to fetch supplies'}</p>`;
+                }
+            } catch (err) {
+                const body = document.getElementById('cat-supplies-body');
+                if (body) body.innerHTML = `<p class="text-red-600">Error: ${err.message}</p>`;
+            }
+        });
+    });
+});
+</script>
+
+{% endblock %}

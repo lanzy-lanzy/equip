@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+
+{% block title %}Approve Borrow Request - Smart Supply Management System{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="mb-8">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Approve Borrow Request</h1>
+            <p class="text-gray-600">Set the borrow date and return deadline</p>
+        </div>
+        <div class="mt-4 md:mt-0">
+            <a href="{% url 'request_detail' supply_request.pk %}"
+                class="inline-flex items-center px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Back to Request
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Request Summary -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <!-- Left Column -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 class="text-lg font-semibold text-gray-800 mb-4">Request Details</h2>
+
+        <div class="space-y-4">
+            <div>
+                <label class="text-sm font-medium text-gray-700">Request ID</label>
+                <p class="text-gray-900 font-mono">{{ supply_request.request_id }}</p>
+            </div>
+
+            <div>
+                <label class="text-sm font-medium text-gray-700">Requested By</label>
+                <p class="text-gray-900">{{ supply_request.user.get_full_name|default:supply_request.user.username }}
+                </p>
+                <p class="text-sm text-gray-600">{{ supply_request.user.email }}</p>
+            </div>
+
+            <div>
+                <label class="text-sm font-medium text-gray-700">Item</label>
+                <p class="text-gray-900 font-medium">{{ supply_request.supply.name }}</p>
+                <div class="mt-2 p-2 bg-green-50 border border-green-200 rounded">
+                    <p class="text-sm font-medium text-green-900">
+                        <i class="fas fa-check-circle text-green-600 mr-1"></i>
+                        Available: <span class="font-bold text-green-700">{{ supply_request.supply.quantity }}</span>
+                        <span class="font-medium text-green-700">{{ supply_request.supply.unit|default:"pieces"
+                            }}</span>
+                    </p>
+                </div>
+            </div>
+
+            <div>
+                <label class="text-sm font-medium text-gray-700">Quantity Requested</label>
+                <p class="text-gray-900 text-lg font-semibold">
+                    {{ supply_request.quantity_requested }}
+                    <span class="text-sm font-normal text-gray-600">{{ supply_request.supply.unit|default:"pieces"
+                        }}</span>
+                </p>
+            </div>
+
+            <div>
+                <label class="text-sm font-medium text-gray-700">Requested Duration</label>
+                <p class="text-gray-900">{{ borrow_duration }} days</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column - Purpose -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 class="text-lg font-semibold text-gray-800 mb-4">Purpose</h2>
+        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 max-h-64 overflow-y-auto">
+            <p class="text-gray-700 text-sm whitespace-pre-wrap">{{ supply_request.purpose }}</p>
+        </div>
+    </div>
+</div>
+
+<!-- Approval Form -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+    <h2 class="text-lg font-semibold text-gray-800 mb-6">Set Borrow Details</h2>
+
+    <form method="post">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="mb-6 bg-red-50 border-l-4 border-red-400 p-4 rounded">
+            {% for error in form.non_field_errors %}
+            <p class="text-red-700 text-sm">{{ error }}</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Borrow Date -->
+            <div>
+                <label for="{{ form.borrowed_date.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                    Borrow Date *
+                </label>
+                {{ form.borrowed_date }}
+                {% if form.borrowed_date.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.borrowed_date.errors.0 }}</p>
+                {% else %}
+                <p class="mt-1 text-sm text-gray-500">The date the item is being borrowed (today)</p>
+                {% endif %}
+            </div>
+
+            <!-- Borrow Duration -->
+            <div>
+                <label for="{{ form.borrow_duration_days.id_for_label }}"
+                    class="block text-sm font-medium text-gray-700 mb-2">
+                    Duration (Days) *
+                </label>
+                {{ form.borrow_duration_days }}
+                {% if form.borrow_duration_days.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.borrow_duration_days.errors.0 }}</p>
+                {% else %}
+                <p class="mt-1 text-sm text-gray-500">Number of days to borrow (requested: {{ borrow_duration }})</p>
+                {% endif %}
+            </div>
+
+            <!-- Location -->
+            <div class="md:col-span-2">
+                <label for="{{ form.location_when_borrowed.id_for_label }}"
+                    class="block text-sm font-medium text-gray-700 mb-2">
+                    Location (Optional)
+                </label>
+                {{ form.location_when_borrowed }}
+                {% if form.location_when_borrowed.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.location_when_borrowed.errors.0 }}</p>
+                {% else %}
+                <p class="mt-1 text-sm text-gray-500">Where the item is borrowed from</p>
+                {% endif %}
+            </div>
+
+            <!-- Notes -->
+            <div class="md:col-span-2">
+                <label for="{{ form.notes.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                    Notes (Optional)
+                </label>
+                {{ form.notes }}
+                {% if form.notes.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.notes.errors.0 }}</p>
+                {% else %}
+                <p class="mt-1 text-sm text-gray-500">Any additional information about the borrow</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Return Deadline Info -->
+        <div class="mt-6 p-4 bg-green-50 border-l-4 border-green-400 rounded">
+            <p class="text-sm text-green-800">
+                <i class="fas fa-calendar-check mr-2"></i>
+                <strong>Return Deadline:</strong> The deadline will be automatically calculated as <span
+                    class="font-mono">borrow date + duration days</span>
+            </p>
+            <p class="text-sm text-green-700 mt-2" id="return-deadline-display">
+                Calculate the deadline by filling in the dates above.
+            </p>
+        </div>
+
+        <!-- Submit Buttons -->
+        <div class="mt-6 flex gap-3">
+            <button type="submit" name="action" value="create"
+                class="inline-flex items-center px-6 py-3 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
+                <i class="fas fa-check-circle mr-2"></i>
+                Approve & Create Borrow Record
+            </button>
+            <button type="submit" name="action" value="approve"
+                class="inline-flex items-center px-6 py-3 bg-gray-300 text-gray-800 text-sm font-medium rounded-lg hover:bg-gray-400 transition-colors">
+                Approve Only
+            </button>
+            <a href="{% url 'request_detail' supply_request.pk %}"
+                class="inline-flex items-center px-6 py-3 bg-gray-300 text-gray-800 text-sm font-medium rounded-lg hover:bg-gray-400 transition-colors">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+    // Calculate and display return deadline
+    function updateReturnDeadline() {
+        const borrowDateInput = document.getElementById('{{ form.borrowed_date.id_for_label }}');
+        const durationInput = document.getElementById('{{ form.borrow_duration_days.id_for_label }}');
+        const deadlineDisplay = document.getElementById('return-deadline-display');
+
+        if (borrowDateInput.value && durationInput.value) {
+            const borrowDate = new Date(borrowDateInput.value);
+            const duration = parseInt(durationInput.value) || 0;
+            const returnDate = new Date(borrowDate);
+            returnDate.setDate(returnDate.getDate() + duration);
+
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            const formattedDate = returnDate.toLocaleDateString('en-US', options);
+            deadlineDisplay.textContent = `Return Deadline: ${formattedDate}`;
+            deadlineDisplay.classList.remove('text-gray-700');
+            deadlineDisplay.classList.add('text-green-700', 'font-medium');
+        }
+    }
+
+    // Add event listeners
+    document.getElementById('{{ form.borrowed_date.id_for_label }}').addEventListener('change', updateReturnDeadline);
+    document.getElementById('{{ form.borrow_duration_days.id_for_label }}').addEventListener('change', updateReturnDeadline);
+
+    // Set today as default date
+    document.addEventListener('DOMContentLoaded', function () {
+        const borrowDateInput = document.getElementById('{{ form.borrowed_date.id_for_label }}');
+        if (!borrowDateInput.value) {
+            const today = new Date().toISOString().split('T')[0];
+            borrowDateInput.value = today;
+        }
+
+        // Set the duration to the requested duration
+        const durationInput = document.getElementById('{{ form.borrow_duration_days.id_for_label }}');
+        if (!durationInput.value) {
+            durationInput.value = {{ borrow_duration }
+        };
+    }
+    
+    updateReturnDeadline();
+});
+</script>
+{% endblock %}

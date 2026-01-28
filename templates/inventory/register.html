@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Smart Supply Management System</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            background: linear-gradient(135deg, #343131 0%, #A04747 100%);
+            min-height: 100vh;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .form-error {
+            color: #dc2626;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .input-field {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+            background-color: #fff;
+            font-size: 1rem;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #A04747;
+            box-shadow: 0 0 0 3px rgba(160, 71, 71, 0.1);
+        }
+        .select-field {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+            background-color: #fff;
+            font-size: 1rem;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1.5rem;
+        }
+        .select-field:focus {
+            outline: none;
+            border-color: #A04747;
+            box-shadow: 0 0 0 3px rgba(160, 71, 71, 0.1);
+        }
+        .role-highlight {
+            animation: highlight 2s ease-in-out;
+        }
+        @keyframes highlight {
+            0% { background-color: #fef3c7; }
+            50% { background-color: #fde68a; }
+            100% { background-color: transparent; }
+        }
+        .role-info {
+            background-color: #fffbeb;
+            border-left: 4px solid #f59e0b;
+            padding: 1rem;
+            margin-top: 0.5rem;
+            border-radius: 0 0.5rem 0.5rem 0;
+            display: none;
+        }
+        .role-info.visible {
+            display: block;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4">
+    <div class="w-full max-w-2xl">
+        <!-- Logo/Brand -->
+        <div class="text-center mb-8">
+            <div class="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-boxes text-4xl text-white"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-white mb-2">Smart Supply</h1>
+            <p class="text-white/80">Management System</p>
+            <p class="text-sm text-white/60 mt-2">JHCSC Dumingag Campus</p>
+        </div>
+
+        <!-- Register Form -->
+        <div class="glass-card rounded-2xl shadow-2xl p-8">
+            <div class="text-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">Create Account</h2>
+                <p class="text-gray-600">Complete all fields to register for a new account</p>
+            </div>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="mb-4 p-3 rounded-lg {% if message.tags == 'error' %}bg-red-100 border border-red-200 text-red-800{% else %}bg-green-100 border border-green-200 text-green-800{% endif %} flex items-center">
+                        <i class="fas fa-{% if message.tags == 'error' %}exclamation-triangle{% else %}check-circle{% endif %} mr-2"></i>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post" class="space-y-6" id="registrationForm">
+                {% csrf_token %}
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Username Field -->
+                    <div class="form-group">
+                        <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-user mr-1"></i> Username *
+                        </label>
+                        {{ form.username }}
+                        {% if form.username.errors %}
+                            <div class="form-error">
+                                {% for error in form.username.errors %}
+                                    <i class="fas fa-exclamation-circle mr-1"></i>{{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <p class="text-xs text-gray-500 mt-1">Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.</p>
+                    </div>
+
+                    <!-- Email Field -->
+                    <div class="form-group">
+                        <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-envelope mr-1"></i> Email Address *
+                        </label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <div class="form-error">
+                                {% for error in form.email.errors %}
+                                    <i class="fas fa-exclamation-circle mr-1"></i>{{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- First Name Field -->
+                    <div class="form-group">
+                        <label for="{{ form.first_name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-user mr-1"></i> First Name *
+                        </label>
+                        {{ form.first_name }}
+                        {% if form.first_name.errors %}
+                            <div class="form-error">
+                                {% for error in form.first_name.errors %}
+                                    <i class="fas fa-exclamation-circle mr-1"></i>{{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Last Name Field -->
+                    <div class="form-group">
+                        <label for="{{ form.last_name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-user mr-1"></i> Last Name *
+                        </label>
+                        {{ form.last_name }}
+                        {% if form.last_name.errors %}
+                            <div class="form-error">
+                                {% for error in form.last_name.errors %}
+                                    <i class="fas fa-exclamation-circle mr-1"></i>{{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Role Field -->
+                    <div class="form-group md:col-span-2">
+                        <label for="{{ form.role.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-user-tag mr-1"></i> Role *
+                        </label>
+                        {{ form.role }}
+                        {% if form.role.errors %}
+                            <div class="form-error">
+                                {% for error in form.role.errors %}
+                                    <i class="fas fa-exclamation-circle mr-1"></i>{{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <p class="text-xs text-gray-500 mt-1">Select your role in the organization</p>
+                        
+                        <!-- Role-specific information -->
+                        <div id="departmentUserInfo" class="role-info mt-3">
+                            <div class="flex items-start">
+                                <i class="fas fa-info-circle text-amber-500 mt-1 mr-2"></i>
+                                <div>
+                                    <h4 class="font-medium text-amber-800">Department User Information</h4>
+                                    <p class="text-amber-700 text-sm mt-1">As a Department User, you will be able to request supplies for your department. You can browse available supplies and submit requests which will be reviewed by GSO Staff.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="gsoStaffInfo" class="role-info mt-3">
+                            <div class="flex items-start">
+                                <i class="fas fa-info-circle text-blue-500 mt-1 mr-2"></i>
+                                <div>
+                                    <h4 class="font-medium text-blue-800">GSO Staff Information</h4>
+                                    <p class="text-blue-700 text-sm mt-1">As GSO Staff, you will manage supply requests, approve or reject requests from Department Users, and handle inventory releases. You'll also be responsible for maintaining supply levels.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Department Field -->
+                    <div class="form-group" id="departmentField">
+                        <label for="{{ form.department.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-building mr-1"></i> Department
+                        </label>
+                        {{ form.department }}
+                        {% if form.department.errors %}
+                            <div class="form-error">
+                                {% for error in form.department.errors %}
+                                    <i class="fas fa-exclamation-circle mr-1"></i>{{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <p class="text-xs text-gray-500 mt-1">Your department or division</p>
+                    </div>
+
+                    <!-- Phone Field -->
+                    <div class="form-group">
+                        <label for="{{ form.phone.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-phone mr-1"></i> Phone Number
+                        </label>
+                        {{ form.phone }}
+                        {% if form.phone.errors %}
+                            <div class="form-error">
+                                {% for error in form.phone.errors %}
+                                    <i class="fas fa-exclamation-circle mr-1"></i>{{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Password Field -->
+                    <div class="form-group">
+                        <label for="{{ form.password1.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-lock mr-1"></i> Password *
+                        </label>
+                        <div class="relative">
+                            {{ form.password1 }}
+                            <button type="button" 
+                                    onclick="togglePassword('id_password1', 'password1-eye')"
+                                    class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                <i id="password1-eye" class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        {% if form.password1.errors %}
+                            <div class="form-error">
+                                {% for error in form.password1.errors %}
+                                    <i class="fas fa-exclamation-circle mr-1"></i>{{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <p class="text-xs text-gray-500 mt-1">Your password must contain at least 8 characters.</p>
+                    </div>
+
+                    <!-- Confirm Password Field -->
+                    <div class="form-group">
+                        <label for="{{ form.password2.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-lock mr-1"></i> Confirm Password *
+                        </label>
+                        <div class="relative">
+                            {{ form.password2 }}
+                            <button type="button" 
+                                    onclick="togglePassword('id_password2', 'password2-eye')"
+                                    class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                <i id="password2-eye" class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        {% if form.password2.errors %}
+                            <div class="form-error">
+                                {% for error in form.password2.errors %}
+                                    <i class="fas fa-exclamation-circle mr-1"></i>{{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Terms and Conditions -->
+                <div class="form-group">
+                    <div class="flex items-start">
+                        <div class="flex items-center h-5">
+                            <input id="terms" name="terms" type="checkbox" required class="focus:ring-[#A04747] h-4 w-4 text-[#A04747] border-gray-300 rounded">
+                        </div>
+                        <div class="ml-3 text-sm">
+                            <label for="terms" class="font-medium text-gray-700">
+                                I agree to the <a href="#" class="text-[#A04747] hover:text-[#343131]">Terms and Conditions</a> and <a href="#" class="text-[#A04747] hover:text-[#343131]">Privacy Policy</a> *
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Register Button -->
+                <button type="submit" 
+                        class="w-full bg-gradient-to-r from-[#343131] to-[#A04747] text-white py-3 px-4 rounded-lg hover:from-[#A04747] hover:to-[#343131] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#A04747] transition-all duration-200 transform hover:scale-105">
+                    <i class="fas fa-user-plus mr-2"></i>
+                    Create Account
+                </button>
+            </form>
+
+            <!-- Login Link -->
+            <div class="mt-6 text-center">
+                <p class="text-gray-600">
+                    Already have an account? 
+                    <a href="{% url 'login' %}" class="text-[#A04747] hover:text-[#343131] font-medium">
+                        Sign in here
+                    </a>
+                </p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center mt-6">
+            <p class="text-white/60 text-sm">
+                © 2024 JHCSC Dumingag Campus
+            </p>
+        </div>
+    </div>
+
+    <script>
+        function togglePassword(inputId, eyeId) {
+            const passwordInput = document.getElementById(inputId);
+            const passwordEye = document.getElementById(eyeId);
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                passwordEye.className = 'fas fa-eye-slash';
+            } else {
+                passwordInput.type = 'password';
+                passwordEye.className = 'fas fa-eye';
+            }
+        }
+
+        // Style form inputs
+        document.addEventListener('DOMContentLoaded', function() {
+            // Apply custom styling to text inputs
+            const textInputs = document.querySelectorAll('input[type="text"], input[type="email"], input[type="password"]');
+            textInputs.forEach(input => {
+                input.classList.add('input-field');
+            });
+            
+            // Apply custom styling to select inputs
+            const selectInputs = document.querySelectorAll('select');
+            selectInputs.forEach(select => {
+                select.classList.add('select-field');
+            });
+            
+            // Role selection handling
+            const roleSelect = document.getElementById('id_role');
+            const departmentUserInfo = document.getElementById('departmentUserInfo');
+            const gsoStaffInfo = document.getElementById('gsoStaffInfo');
+            const departmentField = document.getElementById('departmentField');
+            
+            if (roleSelect) {
+                roleSelect.addEventListener('change', function() {
+                    // Hide all role info boxes
+                    departmentUserInfo.classList.remove('visible');
+                    gsoStaffInfo.classList.remove('visible');
+                    
+                    // Show relevant info based on selection
+                    if (this.value === 'department_user') {
+                        departmentUserInfo.classList.add('visible');
+                        departmentField.style.display = 'block';
+                    } else if (this.value === 'gso_staff') {
+                        gsoStaffInfo.classList.add('visible');
+                        departmentField.style.display = 'block';
+                    } else {
+                        departmentField.style.display = 'block';
+                    }
+                    
+                    // Highlight the selected role
+                    this.classList.add('role-highlight');
+                    setTimeout(() => {
+                        this.classList.remove('role-highlight');
+                    }, 2000);
+                });
+                
+                // Trigger change event on page load to show initial state
+                roleSelect.dispatchEvent(new Event('change'));
+            }
+        });
+
+        // Add enter key support
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.querySelector('form').submit();
+            }
+        });
+    </script>
+</body>
+</html>

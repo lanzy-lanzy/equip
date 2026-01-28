@@ -1,0 +1,369 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ action }} Request - Smart Supply Management System{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav class="flex mb-6" aria-label="Breadcrumb">
+    <ol class="inline-flex items-center space-x-1 md:space-x-3">
+        <li class="inline-flex items-center">
+            <a href="{% url 'dashboard' %}" class="text-gray-700 hover:text-indigo-600 inline-flex items-center">
+                <i class="fas fa-home mr-2"></i>
+                Dashboard
+            </a>
+        </li>
+        <li>
+            <div class="flex items-center">
+                <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
+                <a href="{% url 'request_list' %}" class="text-gray-700 hover:text-indigo-600">Requests</a>
+            </div>
+        </li>
+        <li>
+            <div class="flex items-center">
+                <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
+                <span class="text-gray-500">{{ action }} Request</span>
+            </div>
+        </li>
+    </ol>
+</nav>
+
+<!-- Form Header -->
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-800 mb-2">{{ action }} Supply Request</h1>
+    <p class="text-gray-600">
+        {% if action == 'Create' %}
+        Submit a new request for supplies
+        {% else %}
+        Update your supply request
+        {% endif %}
+    </p>
+</div>
+
+<!-- Form -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+    <form id="bulk-request-form" method="post" action="{% url 'bulk_request_create' %}" class="space-y-6">
+        {% csrf_token %}
+        <input type="hidden" name="bulk_action" value="submit_bulk">
+        <input type="hidden" name="is_borrowing" value="False">
+
+        <!-- Supply Selection - Consumable Items Only -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-1 space-y-6">
+                <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
+                    <h3 class="text-sm font-semibold text-indigo-900 mb-2 flex items-center">
+                        <i class="fas fa-info-circle mr-2"></i> How it works
+                    </h3>
+                    <p class="text-xs text-indigo-700 leading-relaxed">
+                        1. Select an item from the dropdown.<br>
+                        2. Enter the quantity you need.<br>
+                        3. Click <strong>"Add to List"</strong>.<br>
+                        4. Repeat for other items.<br>
+                        5. Provide a purpose and submit.
+                    </p>
+                </div>
+
+                <div>
+                    <label for="supply-search" class="block text-sm font-medium text-gray-700 mb-2">
+                        Search Supply
+                    </label>
+                    <div class="relative">
+                        <input type="text" id="supply-search"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            placeholder="Type to search items..." autocomplete="off">
+                        <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
+
+                        <!-- Dropdown results -->
+                        <div id="search-results"
+                            class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto hidden">
+                            <!-- Results will be populated here -->
+                        </div>
+                    </div>
+                    <input type="hidden" id="selected-supply-id" name="supply">
+                    <p class="mt-2 text-xs text-gray-500">
+                        <i class="fas fa-check-circle mr-1 text-green-600"></i>Only consumable supplies with stock shown
+                    </p>
+                </div>
+
+                <div>
+                    <label for="{{ form.quantity_requested.id_for_label }}"
+                        class="block text-sm font-medium text-gray-700 mb-2">
+                        Quantity
+                    </label>
+                    {{ form.quantity_requested }}
+                    <p class="mt-1 text-xs text-gray-500">
+                        <span id="available-stock">Select a supply</span>
+                    </p>
+                </div>
+
+                <button type="button" id="add-to-list"
+                    class="w-full inline-flex items-center justify-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm">
+                    <i class="fas fa-plus mr-2"></i>
+                    Add to List
+                </button>
+            </div>
+
+            <!-- Dynamic List Display -->
+            <div class="lg:col-span-2 space-y-6">
+                <div class="border border-gray-200 rounded-xl overflow-hidden bg-gray-50">
+                    <table class="min-w-full divide-y divide-gray-200" id="selected-items-table">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Item</th>
+                                <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase w-24">Qty
+                                </th>
+                                <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase w-16">
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200" id="items-list-body">
+                            <tr id="empty-list-row">
+                                <td colspan="3" class="px-4 py-8 text-center text-gray-400 text-sm italic">
+                                    No items added yet. Build your list to proceed.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div>
+                    <label for="{{ form.purpose.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        Purpose for this Request <span class="text-red-500">*</span>
+                    </label>
+                    <textarea name="purpose" id="id_purpose" rows="3"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow"
+                        placeholder="Describe why you need these supplies..." required></textarea>
+                </div>
+
+                <div class="flex items-center justify-end space-x-3 pt-4 border-t border-gray-100">
+                    <a href="{% url 'request_list' %}"
+                        class="px-6 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+                        Cancel
+                    </a>
+                    <button type="submit" id="submit-request-btn" disabled
+                        class="px-8 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed disabled:shadow-none">
+                        <i class="fas fa-paper-plane mr-2"></i>
+                        Submit Request
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const quantityInput = document.getElementById('{{ form.quantity_requested.id_for_label }}');
+        const addToListBtn = document.getElementById('add-to-list');
+        const itemsListBody = document.getElementById('items-list-body');
+        const emptyListRow = document.getElementById('empty-list-row');
+        const submitBtn = document.getElementById('submit-request-btn');
+
+        // Remove required validation from quantity field since it only serves to build the list
+        if (quantityInput) quantityInput.required = false;
+
+        // Supply data from server - passed as JSON for reliability
+        const supplyData = {};
+        const suppliesRaw = JSON.parse('{{ supplies_json|escapejs }}');
+        suppliesRaw.forEach(s => {
+            supplyData[s.id] = s;
+        });
+
+        const selectedItems = new Set();
+
+        function updateSubmitButton() {
+            submitBtn.disabled = selectedItems.size === 0;
+        }
+
+        // Autocomplete search functionality
+        const searchInput = document.getElementById('supply-search');
+        const searchResults = document.getElementById('search-results');
+        const selectedSupplyInput = document.getElementById('selected-supply-id');
+        let currentSelectedSupply = null;
+
+        function filterSupplies(searchTerm) {
+            const term = searchTerm.toLowerCase().trim();
+
+            if (term.length === 0) {
+                return [];
+            }
+
+            // If 1 character, show items starting with that letter
+            if (term.length === 1) {
+                return suppliesRaw.filter(s => s.name.toLowerCase().startsWith(term));
+            }
+
+            // If 3+ characters, show items containing the search term
+            if (term.length >= 3) {
+                return suppliesRaw.filter(s => s.name.toLowerCase().includes(term));
+            }
+
+            return [];
+        }
+
+        function displaySearchResults(results) {
+            if (results.length === 0) {
+                searchResults.innerHTML = '<div class="px-4 py-3 text-sm text-gray-500">No items found</div>';
+                searchResults.classList.remove('hidden');
+                return;
+            }
+
+            searchResults.innerHTML = results.map(supply => `
+                <div class="search-result-item px-4 py-3 hover:bg-indigo-50 cursor-pointer border-b border-gray-100 last:border-b-0" 
+                     data-id="${supply.id}"
+                     data-name="${supply.name}"
+                     data-stock="${supply.stock}"
+                     data-unit="${supply.unit}">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <div class="text-sm font-medium text-gray-900">${supply.name}</div>
+                            <div class="text-xs text-gray-500">${supply.stock} ${supply.unit} available</div>
+                        </div>
+                        ${supply.stock === 0 ? '<span class="text-xs text-red-600 font-medium">Out of stock</span>' : ''}
+                    </div>
+                </div>
+            `).join('');
+
+            searchResults.classList.remove('hidden');
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('input', function () {
+                const searchTerm = this.value;
+                const results = filterSupplies(searchTerm);
+
+                if (searchTerm.length === 0) {
+                    searchResults.classList.add('hidden');
+                    return;
+                }
+
+                if (searchTerm.length === 1 || searchTerm.length >= 3) {
+                    displaySearchResults(results);
+                } else {
+                    searchResults.innerHTML = '<div class="px-4 py-3 text-sm text-gray-500">Type at least 3 characters to search</div>';
+                    searchResults.classList.remove('hidden');
+                }
+            });
+
+            searchInput.addEventListener('focus', function () {
+                if (this.value.length > 0) {
+                    const results = filterSupplies(this.value);
+                    if (this.value.length === 1 || this.value.length >= 3) {
+                        displaySearchResults(results);
+                    }
+                }
+            });
+        }
+
+        // Handle result selection
+        if (searchResults) {
+            searchResults.addEventListener('click', function (e) {
+                const resultItem = e.target.closest('.search-result-item');
+                if (resultItem) {
+                    const supplyId = resultItem.dataset.id;
+                    const supplyName = resultItem.dataset.name;
+                    const stock = resultItem.dataset.stock;
+                    const unit = resultItem.dataset.unit;
+
+                    // Update hidden input and search box
+                    selectedSupplyInput.value = supplyId;
+                    searchInput.value = supplyName;
+                    searchResults.classList.add('hidden');
+
+                    // Update stock display
+                    const availableText = document.getElementById('available-stock');
+                    availableText.textContent = `Available: ${stock} ${unit}`;
+                    quantityInput.max = stock;
+                    if (!quantityInput.value || quantityInput.value <= 0) {
+                        quantityInput.value = 1;
+                    }
+
+                    // Store current selection
+                    currentSelectedSupply = supplyData[supplyId];
+                }
+            });
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function (e) {
+            if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+                searchResults.classList.add('hidden');
+            }
+        });
+
+        if (addToListBtn) {
+            addToListBtn.addEventListener('click', function () {
+                const supplyId = selectedSupplyInput.value;
+                const quantity = parseInt(quantityInput.value);
+
+                if (!supplyId) {
+                    alert('Please search and select a supply.');
+                    return;
+                }
+
+                if (isNaN(quantity) || quantity <= 0) {
+                    alert('Please enter a valid quantity.');
+                    return;
+                }
+
+                const supply = supplyData[supplyId];
+                if (quantity > supply.stock) {
+                    alert(`Insufficient stock. Only ${supply.stock} ${supply.unit} available.`);
+                    return;
+                }
+
+                if (selectedItems.has(supplyId)) {
+                    alert('This item is already in your list. Remove it first to change the quantity.');
+                    return;
+                }
+
+                // Hide empty row
+                if (emptyListRow) emptyListRow.style.display = 'none';
+
+                const row = document.createElement('tr');
+                row.id = `item-row-${supplyId}`;
+                row.innerHTML = `
+                <td class="px-4 py-3 text-sm text-gray-900 font-medium">${supply.name}</td>
+                <td class="px-4 py-3 text-sm text-gray-600 text-center font-mono">${quantity} ${supply.unit}</td>
+                <td class="px-4 py-3 text-right">
+                    <button type="button" class="remove-item text-red-500 hover:text-red-700 transition-colors" data-id="${supplyId}">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                    <input type="hidden" name="supply_ids" value="${supplyId}">
+                    <input type="hidden" name="quantity_${supplyId}" value="${quantity}">
+                </td>
+            `;
+                itemsListBody.appendChild(row);
+
+                // Update state
+                selectedItems.add(supplyId);
+                updateSubmitButton();
+
+                // Reset selection for next item
+                searchInput.value = '';
+                selectedSupplyInput.value = '';
+                quantityInput.value = '';
+                document.getElementById('available-stock').textContent = 'Select a supply';
+            });
+        }
+
+        // Delegate remove event
+        if (itemsListBody) {
+            itemsListBody.addEventListener('click', function (e) {
+                if (e.target.closest('.remove-item')) {
+                    const btn = e.target.closest('.remove-item');
+                    const supplyId = btn.getAttribute('data-id');
+                    const row = document.getElementById(`item-row-${supplyId}`);
+
+                    row.remove();
+                    selectedItems.delete(supplyId);
+
+                    if (selectedItems.size === 0 && emptyListRow) {
+                        emptyListRow.style.display = '';
+                    }
+                    updateSubmitButton();
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

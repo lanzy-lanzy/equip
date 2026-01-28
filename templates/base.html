@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en" x-data="{ sidebarOpen: window.innerWidth >= 768, isMobile: window.innerWidth < 768 }" x-init="() => { 
+    const updateScreenSize = () => {
+        const isMobile = window.innerWidth < 768;
+        isMobile ? sidebarOpen = false : sidebarOpen = true;
+        document.querySelector('[x-data]')._x_dataStack[0].isMobile = isMobile;
+    };
+    window.addEventListener('resize', updateScreenSize);
+    updateScreenSize();
+}">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>{% block title %}Smart Supply Management System{% endblock %}</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Alpine.js CDN -->
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+
+    <!-- HTMX CDN -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- jsQR Library -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/custom.css">
+
+    <!-- Custom Styles -->
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #343131 0%, #A04747 100%);
+        }
+
+        .sidebar-bg {
+            background: linear-gradient(135deg, #343131 0%, #5a2a2a 100%);
+        }
+
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .transition-all {
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-item.active {
+            background: rgba(255, 255, 255, 0.2);
+            border-left: 4px solid #EEDF7A;
+        }
+
+        .stock-low {
+            color: #f59e0b;
+        }
+
+        .stock-out {
+            color: #ef4444;
+        }
+
+        .stock-good {
+            color: #10b981;
+        }
+
+        /* Hide sidebar for landing page - more specific rules */
+        body.landing-page .fixed.inset-y-0.left-0 {
+            display: none !important;
+        }
+
+        body.landing-page .md\:ml-64 {
+            margin-left: 0 !important;
+        }
+
+        /* Mobile header adjustment for landing page */
+        body.landing-page .md\:hidden {
+            display: none !important;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        /* Ensure sidebar overlay covers entire viewport */
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 40;
+        }
+    </style>
+
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.tailwindcss.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
+
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body class="bg-gray-50 font-sans {% block body_class %}{% endblock %}">
+    <!-- Mobile Header -->
+    <div class="md:hidden bg-white shadow-sm border-b px-4 py-3 flex items-center justify-between">
+        <button @click="sidebarOpen = !sidebarOpen" class="text-gray-600 hover:text-gray-900">
+            <i class="fas fa-bars text-xl"></i>
+        </button>
+        <h1 class="text-lg font-semibold text-gray-800">Supply Management</h1>
+        <div class="w-8"></div>
+    </div>
+
+    <!-- Sidebar Overlay for Mobile -->
+    <div x-show="sidebarOpen" @click="sidebarOpen = false" class="sidebar-overlay md:hidden"
+        x-transition:enter="transition ease-in-out duration-300" x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in-out duration-300"
+        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+    </div>
+
+    <!-- Sidebar -->
+    <div :class="{'translate-x-0': sidebarOpen, '-translate-x-full': !sidebarOpen}"
+        class="fixed inset-y-0 left-0 z-50 w-64 sidebar-bg text-white transition-transform duration-300 ease-in-out md:translate-x-0"
+        :style="isMobile ? '' : (sidebarOpen ? 'transform: translateX(0);' : 'transform: translateX(-100%);')">
+
+        <!-- Logo/Brand -->
+        <div class="p-6 border-b border-white/20">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-boxes text-xl"></i>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold">Smart Supply</h2>
+                    <p class="text-sm text-white/80">Management System</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="p-4 overflow-y-auto h-[calc(100vh-140px)]">
+            <div class="space-y-2">
+                <!-- Dashboard -->
+                <a href="{% url 'dashboard' %}"
+                    class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg transition-all {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </a>
+
+                <!-- Supplies Dropdown - Only for admin and GSO staff -->
+                {% if user.role in 'admin,gso_staff' %}
+                <div
+                    x-data="{ open: {% if request.resolver_match.url_name in 'supply_list,supply_create,supply_detail,category_list,transaction_list,stock_adjustment_list,stock_adjustment_create,stock_adjustment_detail' %}true{% else %}false{% endif %} }">
+                    <button @click="open = !open"
+                        class="sidebar-item w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all">
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-boxes"></i>
+                            <span>Supplies</span>
+                        </div>
+                        <i :class="{'rotate-180': open}" class="fas fa-chevron-down text-sm transition-transform"></i>
+                    </button>
+
+                    <div x-show="open" x-transition class="mt-2 ml-4 space-y-1">
+                        <a href="{% url 'supply_list' %}"
+                            class="sidebar-item block px-4 py-2 rounded-lg transition-all text-sm {% if request.resolver_match.url_name == 'supply_list' %}active{% endif %}">
+                            <i class="fas fa-list mr-2"></i>All Supplies
+                        </a>
+                        <a href="{% url 'supply_create' %}"
+                            class="sidebar-item block px-4 py-2 rounded-lg transition-all text-sm {% if request.resolver_match.url_name == 'supply_create' %}active{% endif %}">
+                            <i class="fas fa-plus mr-2"></i>Add Supply
+                        </a>
+                        <a href="{% url 'category_list' %}"
+                            class="sidebar-item block px-4 py-2 rounded-lg transition-all text-sm {% if request.resolver_match.url_name == 'category_list' %}active{% endif %}">
+                            <i class="fas fa-folder mr-2"></i>Manage Categories
+                        </a>
+                        <a href="{% url 'transaction_list' %}"
+                            class="sidebar-item block px-4 py-2 rounded-lg transition-all text-sm {% if request.resolver_match.url_name == 'transaction_list' %}active{% endif %}">
+                            <i class="fas fa-history mr-2"></i>Stock History
+                        </a>
+                        <a href="{% url 'stock_adjustment_list' %}"
+                            class="sidebar-item block px-4 py-2 rounded-lg transition-all text-sm {% if request.resolver_match.url_name in 'stock_adjustment_list,stock_adjustment_create,stock_adjustment_detail' %}active{% endif %}">
+                            <i class="fas fa-tools mr-2"></i>Lost/Damaged Items
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Requests Dropdown - Available to all users -->
+                <div
+                    x-data="{ open: {% if request.resolver_match.url_name in 'request_list,request_create,request_detail,department_request_history' %}true{% else %}false{% endif %} }">
+                    <button @click="open = !open"
+                        class="sidebar-item w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all">
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-clipboard-list"></i>
+                            <span>Requests</span>
+                        </div>
+                        <i :class="{'rotate-180': open}" class="fas fa-chevron-down text-sm transition-transform"></i>
+                    </button>
+
+                    <div x-show="open" x-transition class="mt-2 ml-4 space-y-1">
+                        <a href="{% url 'request_list' %}"
+                            class="sidebar-item block px-4 py-2 rounded-lg transition-all text-sm {% if request.resolver_match.url_name == 'request_list' %}active{% endif %}">
+                            <i class="fas fa-list mr-2"></i>All Requests
+                        </a>
+                        {% if user.role == 'department_user' %}
+                        <a href="{% url 'department_request_history' %}"
+                            class="sidebar-item block px-4 py-2 rounded-lg transition-all text-sm {% if request.resolver_match.url_name == 'department_request_history' %}active{% endif %}">
+                            <i class="fas fa-history mr-2"></i>My History
+                        </a>
+                        {% endif %}
+                        <a href="{% url 'request_create' %}"
+                            class="sidebar-item block px-4 py-2 rounded-lg transition-all text-sm {% if request.resolver_match.url_name == 'request_create' %}active{% endif %}">
+                            <i class="fas fa-plus mr-2"></i>New Request
+                        </a>
+                    </div>
+                </div>
+
+                <!-- QR Scanner - Only for admin and GSO staff -->
+                {% if user.role in 'admin,gso_staff' %}
+                <a href="{% url 'qr_scanner' %}"
+                    class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg transition-all {% if request.resolver_match.url_name == 'qr_scanner' %}active{% endif %}">
+                    <i class="fas fa-qrcode"></i>
+                    <span>QR Scanner</span>
+                </a>
+                {% endif %}
+
+                <!-- Borrowed Items - For all authenticated users -->
+                <a href="{% url 'borrowed_items_list' %}"
+                    class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg transition-all {% if request.resolver_match.url_name == 'borrowed_items_list' %}active{% endif %}">
+                    <i class="fas fa-history"></i>
+                    <span>Borrowed Items</span>
+                </a>
+
+                <!-- Request for Equipment - Only for department users -->
+                {% if user.role == 'department_user' %}
+                <a href="{% url 'request_borrow_item' %}"
+                    class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg transition-all {% if request.resolver_match.url_name == 'request_borrow_item' %}active{% endif %}">
+                    <i class="fas fa-hand-holding"></i>
+                    <span>Request for Equipment</span>
+                </a>
+                {% endif %}
+
+                <!-- Reports - Only for admin and GSO staff -->
+                {% if user.role in 'admin,gso_staff' %}
+                <a href="{% url 'reports' %}"
+                    class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg transition-all {% if request.resolver_match.url_name == 'reports' %}active{% endif %}">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Reports</span>
+                </a>
+                {% endif %}
+
+                <!-- Analytics & Tracking - Only for admin and GSO staff -->
+                {% if user.role in 'admin,gso_staff' %}
+                <div
+                    x-data="{ open: {% if request.resolver_match.url_name in 'requestor_borrower_tracking,user_analytics_detail,most_requested_items' %}true{% else %}false{% endif %} }">
+                    <button @click="open = !open"
+                        class="sidebar-item w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all">
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Analytics</span>
+                        </div>
+                        <i :class="{'rotate-180': open}" class="fas fa-chevron-down text-sm transition-transform"></i>
+                    </button>
+
+                    <div x-show="open" x-transition class="mt-2 ml-4 space-y-1">
+                        <a href="{% url 'requestor_borrower_tracking' %}"
+                            class="sidebar-item block px-4 py-2 rounded-lg transition-all text-sm {% if request.resolver_match.url_name == 'requestor_borrower_tracking' %}active{% endif %}">
+                            <i class="fas fa-users mr-2"></i>Requestor/Borrower Tracking
+                        </a>
+                        <a href="{% url 'most_requested_items' %}"
+                            class="sidebar-item block px-4 py-2 rounded-lg transition-all text-sm {% if request.resolver_match.url_name == 'most_requested_items' %}active{% endif %}">
+                            <i class="fas fa-fire mr-2"></i>Most Requested Items
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- User Management - Only for admin -->
+                {% if user.role == 'admin' %}
+                <a href="{% url 'user_management' %}"
+                    class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg transition-all {% if request.resolver_match.url_name == 'user_management' %}active{% endif %}">
+                    <i class="fas fa-users-cog"></i>
+                    <span>User Management</span>
+                </a>
+                {% endif %}
+            </div>
+        </nav>
+
+        <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-white/20">
+            <div class="flex items-center space-x-3">
+                <a href="{% url 'profile_update' %}"
+                    class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center overflow-hidden hover:bg-white/30 transition-colors">
+                    {% if user.profile_picture %}
+                    <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}"
+                        class="w-full h-full object-cover">
+                    {% else %}
+                    <i class="fas fa-user"></i>
+                    {% endif %}
+                </a>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium truncate">{{ user.username }}</p>
+                    <p class="text-xs text-white/80 truncate">{{ user.get_role_display }}</p>
+                </div>
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="text-white/80 hover:text-white" title="Logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div :class="{'md:ml-64': sidebarOpen && !isMobile}" class="min-h-screen transition-all duration-300 main-content">
+        <!-- Desktop Header -->
+        <div class="hidden md:block bg-white shadow-sm border-b px-6 py-4">
+            <div class="flex items-center justify-between">
+                <button @click="sidebarOpen = !sidebarOpen" class="text-gray-600 hover:text-gray-900">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-gray-600">Welcome, {{ user.first_name|default:user.username }}</span>
+
+                    <!-- Notifications -->
+                    <div class="relative">
+                        <button id="notification-button"
+                            class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center"
+                            onclick="toggleNotifications()" aria-haspopup="true" aria-expanded="false">
+                            <i class="fas fa-bell text-gray-600"></i>
+                            {% if unread_notifications_count and unread_notifications_count > 0 %}
+                            <span class="absolute -top-1 -right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-600 rounded-full">{{ unread_notifications_count }}</span>
+                            {% endif %}
+                        </button>
+
+                        <div id="notifications-dropdown"
+                            class="hidden absolute right-0 mt-2 w-80 bg-white border rounded-lg shadow-lg z-50">
+                            <div class="p-3 border-b">
+                                <div class="flex items-center justify-between">
+                                    <strong>Notifications</strong>
+                                    <button onclick="markAllRead(event)" class="text-xs text-indigo-600">Mark all
+                                        read</button>
+                                </div>
+                            </div>
+                            <div class="max-h-64 overflow-y-auto">
+                                {% if unread_notifications %}
+                                {% for note in unread_notifications %}
+                                <div class="p-3 border-b hover:bg-gray-50">
+                                    <div class="text-sm font-medium">{{ note.title }}</div>
+                                    <div class="text-xs text-gray-500">{{ note.message }}</div>
+                                    <div class="text-xs text-gray-400 mt-1">{{ note.created_at|timesince }} ago</div>
+                                </div>
+                                {% endfor %}
+                                {% else %}
+                                <div class="p-4 text-sm text-gray-500">No new notifications</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="relative">
+                        <a href="{% url 'profile_update' %}"
+                            class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden hover:bg-gray-300 transition-colors">
+                            {% if user.profile_picture %}
+                            <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}"
+                                class="w-full h-full object-cover">
+                            {% else %}
+                            <i class="fas fa-user text-gray-600"></i>
+                            {% endif %}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Page Content -->
+        <main class="p-4 md:p-6">
+            <!-- Global Overdue Alert -->
+            {% if overdue_count and overdue_count > 0 and user.role in 'admin,gso_staff' %}
+            <div class="mb-6 bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg shadow-sm animate-pulse-once">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-clock text-red-400 text-xl"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-red-700">
+                            <span class="font-bold">Overdue Items Alert:</span>
+                            There are <strong>{{ overdue_count }}</strong> items that are past their return deadline.
+                            <a href="{% url 'borrowed_items_list' %}?status=overdue"
+                                class="ml-2 font-medium underline text-red-800 hover:text-red-900 transition-colors">
+                                View overdue items
+                            </a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Global Low Stock Alert -->
+            {% if low_stock_count and low_stock_count > 0 and user.role in 'admin,gso_staff' %}
+            <div class="mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg shadow-sm animate-pulse-once">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle text-yellow-400 text-xl"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-yellow-700">
+                            <span class="font-bold">Low Stock Warning:</span>
+                            There are <strong>{{ low_stock_count }}</strong> items at or below their minimum stock
+                            level.
+                            <a href="{% url 'supply_list' %}?stock=low"
+                                class="ml-2 font-medium underline text-yellow-800 hover:text-yellow-900 transition-colors">
+                                Review items
+                            </a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Messages -->
+            {% if messages %}
+            <div class="mb-6 space-y-2">
+                {% for message in messages %}
+                <div
+                    class="alert alert-{{ message.tags }} bg-{{ message.tags }}-100 border border-{{ message.tags }}-200 text-{{ message.tags }}-800 px-4 py-3 rounded-lg flex items-center">
+                    <i
+                        class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}times-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} mr-2"></i>
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // Initialize HTMX
+        document.addEventListener('DOMContentLoaded', function () {
+            // Add CSRF token to HTMX requests
+            document.body.addEventListener('htmx:configRequest', function (event) {
+                event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+            });
+        });
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', function (event) {
+            const alpineEl = document.querySelector('[x-data]');
+            if (!alpineEl) return;
+
+            const alpineData = alpineEl._x_dataStack[0];
+            const isMobile = alpineData.isMobile;
+            if (!isMobile) return;
+
+            const sidebar = document.querySelector('.fixed.inset-y-0.left-0');
+            const overlay = document.querySelector('.sidebar-overlay');
+            const mobileToggleButton = document.querySelector('.md\\:hidden .text-gray-600');
+
+            // Check if click is outside sidebar and not on the toggle button
+            if (sidebar &&
+                overlay &&
+                !sidebar.contains(event.target) &&
+                !overlay.contains(event.target) &&
+                (!mobileToggleButton || !mobileToggleButton.contains(event.target))) {
+                // Only close if sidebar is currently open
+                if (alpineData.sidebarOpen) {
+                    alpineData.sidebarOpen = false;
+                }
+            }
+        });
+    </script>
+
+    <script>
+        function toggleNotifications() {
+            const el = document.getElementById('notifications-dropdown');
+            el.classList.toggle('hidden');
+        }
+
+        async function markAllRead(e) {
+            e.preventDefault();
+            try {
+                const resp = await fetch('{% url "mark_all_notifications_read" %}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Accept': 'application/json',
+                    },
+                });
+                if (resp.ok) {
+                    // reload to refresh notification count/UI
+                    location.reload();
+                } else {
+                    console.error('Failed to mark notifications read');
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+    </script>
+
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.tailwindcss.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+
+</html>

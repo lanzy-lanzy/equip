@@ -1,0 +1,355 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Manage Borrowed Item - Smart Supply Management System{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="mb-8">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Manage Borrowed Item</h1>
+            <p class="text-gray-600">Manage borrowed item details and status</p>
+        </div>
+        <div class="mt-4 md:mt-0">
+            <a href="{% url 'borrowed_items_list' %}"
+                class="inline-flex items-center px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Back to List
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Borrowed Item Details -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+    <!-- Item Information -->
+    <div class="lg:col-span-2">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Item Information</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500 mb-1">Item Name</h3>
+                    <p class="text-lg font-medium text-gray-900">{{ borrowed_item.supply.name }}</p>
+                </div>
+
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500 mb-1">Category</h3>
+                    <p class="text-lg font-medium text-gray-900">{{ borrowed_item.supply.category.name }}</p>
+                </div>
+
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500 mb-1">Borrowed By</h3>
+                    <p class="text-lg font-medium text-gray-900">{{ borrowed_item.borrower.get_full_name|default:borrowed_item.borrower.username }}</p>
+                    <p class="text-sm text-gray-500">{{ borrowed_item.borrower.username }}</p>
+                </div>
+
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500 mb-1">Quantity</h3>
+                    <p class="text-lg font-medium text-gray-900">{{ borrowed_item.borrowed_quantity|intcomma }}</p>
+                </div>
+
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500 mb-1">Borrowed At</h3>
+                    <p class="text-lg font-medium text-gray-900">{{ borrowed_item.borrowed_at|date:"M d, Y" }}</p>
+                    <p class="text-sm text-gray-500">{{ borrowed_item.borrowed_at|time:"H:i" }}</p>
+                </div>
+
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500 mb-1">Status</h3>
+                    {% if borrowed_item.return_status == 'lost' %}
+                    <span
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        Lost
+                    </span>
+                    <p class="text-sm text-gray-500 mt-1">Marked as lost on {{ borrowed_item.returned_at|date:"M d, Y"
+                        }}</p>
+                    {% elif borrowed_item.return_status == 'damaged' %}
+                    <span
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                        Damaged
+                    </span>
+                    <p class="text-sm text-gray-500 mt-1">Marked as damaged on {{ borrowed_item.returned_at|date:"M d,
+                        Y" }}</p>
+                    {% elif borrowed_item.is_returned %}
+                    <span
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        Returned
+                    </span>
+                    <p class="text-sm text-gray-500 mt-1">Returned on {{ borrowed_item.returned_at|date:"M d, Y" }} at
+                        {{ borrowed_item.returned_at|time:"H:i" }}</p>
+                    {% else %}
+                    <span
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        Borrowed
+                    </span>
+                    <p class="text-sm text-gray-500 mt-1">Borrowed for {{ borrowed_item.borrowed_at|timesince }}</p>
+                    {% endif %}
+                </div>
+
+                {% if borrowed_item.is_returned %}
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500 mb-1">Duration</h3>
+                    <p class="text-lg font-medium text-gray-900">{{ borrowed_item.duration_display }}</p>
+                </div>
+                {% endif %}
+
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500 mb-1">Location When Borrowed</h3>
+                    <p class="text-lg font-medium text-gray-900">{{ borrowed_item.location_when_borrowed }}</p>
+                </div>
+
+                {% if borrowed_item.location_when_returned %}
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500 mb-1">Location When Returned</h3>
+                    <p class="text-lg font-medium text-gray-900">{{ borrowed_item.location_when_returned }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Actions</h2>
+
+            {% if not borrowed_item.is_returned %}
+            <!-- Mark as Returned Form -->
+            <form method="post" class="mb-6">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="mark_returned">
+
+                <div class="mb-4">
+                    <label for="location" class="block text-sm font-medium text-gray-700 mb-2">Return Location</label>
+                    <input type="text" id="location" name="location" value="{{ borrowed_item.location_when_borrowed }}"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        placeholder="Enter return location">
+                </div>
+
+                <div class="mb-4">
+                    <label for="notes" class="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+                    <textarea id="notes" name="notes" rows="3"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        placeholder="Add any additional notes...">{{ borrowed_item.notes|default:"" }}</textarea>
+                </div>
+
+                <button type="submit"
+                    class="w-full inline-flex items-center justify-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
+                    <i class="fas fa-check mr-2"></i>
+                    Mark as Returned
+                </button>
+            </form>
+
+            <!-- Mark as Lost/Damaged Forms Toggles -->
+            <div x-data="{ reportType: null }" class="mb-6 border-t border-gray-100 pt-6">
+                <div class="flex space-x-2 mb-4">
+                    <button @click="reportType = reportType === 'lost' ? null : 'lost'"
+                        :class="reportType === 'lost' ? 'bg-red-100 text-red-800 border-red-200' : 'bg-gray-100 text-gray-700 border-transparent hover:bg-gray-200'"
+                        class="flex-1 py-2 px-3 text-sm font-medium rounded-lg border transition-colors">
+                        <i class="fas fa-times-circle mr-2"></i> Report Lost
+                    </button>
+                    <button @click="reportType = reportType === 'damaged' ? null : 'damaged'"
+                        :class="reportType === 'damaged' ? 'bg-orange-100 text-orange-800 border-orange-200' : 'bg-gray-100 text-gray-700 border-transparent hover:bg-gray-200'"
+                        class="flex-1 py-2 px-3 text-sm font-medium rounded-lg border transition-colors">
+                        <i class="fas fa-exclamation-triangle mr-2"></i> Report Damaged
+                    </button>
+                </div>
+
+                <!-- Lost Form -->
+                <div x-show="reportType === 'lost'" class="bg-red-50 p-4 rounded-lg border border-red-100">
+                    <h3 class="text-sm font-semibold text-red-800 mb-2">Report Item as Lost</h3>
+                    <p class="text-xs text-red-600 mb-3">This will mark the item as lost and remove it from inventory
+                        count.</p>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="mark_lost">
+                        <div class="mb-3">
+                            <label for="lost_reason"
+                                class="block text-xs font-medium text-red-700 mb-1">Reason/Details</label>
+                            <textarea id="lost_reason" name="reason" rows="2" required
+                                class="w-full px-3 py-2 border border-red-200 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm"
+                                placeholder="Explain how the item was lost..."></textarea>
+                        </div>
+                        <button type="submit"
+                            onclick="return confirm('Are you sure you want to mark this item as LOST? This cannot be undone.')"
+                            class="w-full inline-flex items-center justify-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors">
+                            Confirm Lost Item
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Damaged Form -->
+                <div x-show="reportType === 'damaged'" class="bg-orange-50 p-4 rounded-lg border border-orange-100">
+                    <h3 class="text-sm font-semibold text-orange-800 mb-2">Report Item as Damaged</h3>
+                    <p class="text-xs text-orange-600 mb-3">This will mark the item as damaged and remove from usable
+                        inventory.</p>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="mark_damaged">
+                        <div class="mb-3">
+                            <label for="damaged_reason" class="block text-xs font-medium text-orange-700 mb-1">Damage
+                                Details</label>
+                            <textarea id="damaged_reason" name="reason" rows="2" required
+                                class="w-full px-3 py-2 border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm"
+                                placeholder="Describe the damage..."></textarea>
+                        </div>
+                        <button type="submit"
+                            onclick="return confirm('Are you sure you want to mark this item as DAMAGED? This cannot be undone.')"
+                            class="w-full inline-flex items-center justify-center px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700 transition-colors">
+                            Confirm Damaged Item
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            {% else %}
+            <div class="text-center py-4">
+                {% if borrowed_item.return_status == 'lost' %}
+                <i class="fas fa-times-circle text-2xl text-red-500 mb-2"></i>
+                <p class="text-gray-600">Item marked as Lost</p>
+                {% elif borrowed_item.return_status == 'damaged' %}
+                <i class="fas fa-exclamation-triangle text-2xl text-orange-500 mb-2"></i>
+                <p class="text-gray-600">Item marked as Damaged</p>
+                {% else %}
+                <i class="fas fa-check-circle text-2xl text-green-500 mb-2"></i>
+                <p class="text-gray-600">This item has been returned</p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% if not borrowed_item.is_returned %}
+            <!-- Extend Deadline Form -->
+            <div class="border-t border-gray-100 pt-6 mb-6">
+                <h3 class="text-sm font-medium text-gray-900 mb-4">Extend Return Deadline</h3>
+                <form method="post" class="mb-2">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="extend_deadline">
+
+                    <div class="mb-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <label for="new_deadline" class="block text-sm font-medium text-gray-700">New
+                                Deadline</label>
+                            <span class="text-xs text-gray-500">Current: {{ borrowed_item.return_deadline|date:"M d,
+                                Y"|default:"None" }}</span>
+                        </div>
+                        <input type="date" id="new_deadline" name="new_deadline"
+                            min="{{ borrowed_item.return_deadline|date:'Y-m-d' }}" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="extension_reason" class="block text-sm font-medium text-gray-700 mb-2">Reason
+                            (Optional)</label>
+                        <input type="text" id="extension_reason" name="extension_reason"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            placeholder="Why is it being extended?">
+                    </div>
+
+                    <button type="submit"
+                        class="w-full inline-flex items-center justify-center px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors">
+                        <i class="fas fa-clock mr-2"></i>
+                        Extend Deadline
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+
+            <!-- Add Note Form -->
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_note">
+
+                <div class="mb-4">
+                    <label for="note" class="block text-sm font-medium text-gray-700 mb-2">Add Note</label>
+                    <textarea id="note" name="note" rows="3"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        placeholder="Enter your note..."></textarea>
+                </div>
+
+                <button type="submit"
+                    class="w-full inline-flex items-center justify-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+                    <i class="fas fa-plus mr-2"></i>
+                    Add Note
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Notes Section -->
+{% if borrowed_item.notes %}
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+    <h2 class="text-xl font-semibold text-gray-800 mb-4">Notes</h2>
+    <div class="bg-gray-50 rounded-lg p-4">
+        <pre class="whitespace-pre-wrap text-gray-700">{{ borrowed_item.notes }}</pre>
+    </div>
+</div>
+{% endif %}
+
+<!-- Transaction History -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+    <h2 class="text-xl font-semibold text-gray-800 mb-4">Transaction History</h2>
+
+    {% if transactions %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Previous
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">New</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Performed
+                        By</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for transaction in transactions %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                    {% if transaction.transaction_type == 'in' %}bg-green-100 text-green-800
+                                    {% elif transaction.transaction_type == 'out' %}bg-red-100 text-red-800
+                                    {% else %}bg-blue-100 text-blue-800{% endif %}">
+                            {{ transaction.get_transaction_type_display }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                         {{ transaction.quantity|intcomma }}
+                     </td>
+                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                         {{ transaction.previous_quantity|intcomma }}
+                     </td>
+                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                         {{ transaction.new_quantity|intcomma }}
+                     </td>
+                    <td class="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
+                        {{ transaction.reason }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {{ transaction.performed_by.username }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {{ transaction.created_at|date:"M d, Y" }}<br>
+                        <span class="text-xs text-gray-500">{{ transaction.created_at|time:"H:i" }}</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-8">
+        <i class="fas fa-history text-2xl text-gray-300 mb-2"></i>
+        <p class="text-gray-500">No transaction history found</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

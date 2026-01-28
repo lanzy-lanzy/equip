@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block title %}Borrowed Items - Smart Supply Management System{% endblock %}
+
+{% block content %}
+ <!-- Page Header -->
+<div class="mb-8">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Borrowed Items</h1>
+            <p class="text-gray-600">Track items borrowed and returned with duration information</p>
+        </div>
+        {% if user.role in 'admin,gso_staff' %}
+        <div class="mt-4 md:mt-0 flex gap-2">
+            <a href="{% url 'export_borrowed_items_csv' %}?search={{ search }}&status={{ status_filter }}" 
+               class="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
+                <i class="fas fa-file-csv mr-2"></i> Export CSV
+            </a>
+            <a href="{% url 'export_borrowed_items_pdf' %}?search={{ search }}&status={{ status_filter }}" 
+               class="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors">
+                <i class="fas fa-file-pdf mr-2"></i> Export PDF
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Filters and Search -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Search -->
+        <div>
+            <label for="search" class="block text-sm font-medium text-gray-700 mb-2">Search Items</label>
+            <div class="relative">
+here                 <input type="text" id="search" name="search" value="{{ search }}"
+                    placeholder="Search by item name or borrower..."
+                    class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    hx-get="{% url 'borrowed_items_list' %}" hx-trigger="keyup changed delay:500ms, search"
+                    hx-target="#borrowed-items-list" hx-indicator="#search-spinner" hx-include="#search, #status">
+                <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                <span id="search-spinner" class="htmx-indicator absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <i class="fas fa-spinner fa-spin text-gray-400"></i>
+                </span>
+            </div>
+        </div>
+
+        <!-- Status Filter -->
+        <div>
+            <label for="status" class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+            <select id="status" name="status"
+                class="w-full py-2 px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                hx-get="{% url 'borrowed_items_list' %}" hx-trigger="change" hx-target="#borrowed-items-list"
+                hx-include="[name='search']">
+                <option value="">All Items</option>
+                <option value="overdue" {% if status_filter == 'overdue' %}selected{% endif %}>Overdue</option>
+                <option value="borrowed" {% if status_filter == 'borrowed' %}selected{% endif %}>Currently Borrowed
+                </option>
+                <option value="returned" {% if status_filter == 'returned' %}selected{% endif %}>Returned</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- Borrowed Items List -->
+<div id="borrowed-items-list">
+    {% include 'inventory/partials/borrowed_items_list.html' %}
+</div>
+{% endblock %}

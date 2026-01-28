@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}Supply Requests - Smart Supply Management System{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="mb-8">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Supply Requests</h1>
+            <p class="text-gray-600">
+                {% if user.role == 'admin' %}
+                Manage all supply requests across the system
+                {% elif user.role == 'gso_staff' %}
+                Manage all supply requests
+                {% else %}
+                Track your supply requests and their status
+                {% endif %}
+            </p>
+        </div>
+
+        {% if user.role == 'department_user' %}
+        <div class="mt-4 md:mt-0">
+            <a href="{% url 'request_create' %}"
+                class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+                <i class="fas fa-plus mr-2"></i>
+                New Request
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Search -->
+        <div class="md:col-span-2">
+            <label for="search" class="block text-sm font-medium text-gray-700 mb-2">Search Requests</label>
+            <div class="relative">
+                <input type="text" id="search" name="search" value="{{ search }}"
+                    placeholder="Search by request ID, supply name, or user..."
+                    class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    hx-get="{% url 'request_list' %}" hx-trigger="keyup changed delay:500ms" hx-target="#request-list"
+                    hx-include="#search, #status">
+                <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+            </div>
+        </div>
+
+        <!-- Status Filter -->
+        <div>
+            <label for="status" class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+            <select id="status" name="status"
+                class="w-full py-2 px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                hx-get="{% url 'request_list' %}" hx-trigger="change" hx-target="#request-list"
+                hx-include="#search, #status">
+                <option value="">All Status</option>
+                <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
+                <option value="released" {% if status_filter == 'released' %}selected{% endif %}>Released</option>
+                <option value="returned" {% if status_filter == 'returned' %}selected{% endif %}>Returned</option>
+                <option value="partially_returned" {% if status_filter == 'partially_returned' %}selected{% endif %}>Partially Returned</option>
+                <option value="returned_with_issues" {% if status_filter == 'returned_with_issues' %}selected{% endif %}>Returned with Issues</option>
+                <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- Request List -->
+<div id="request-list">
+    {% include 'inventory/partials/request_list.html' %}
+</div>
+{% endblock %}

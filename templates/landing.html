@@ -1,0 +1,1581 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Smart Supply Management System - Efficient Inventory Control{% endblock %}
+
+{% block body_class %}landing-page{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Custom color palette */
+    :root {
+        --primary-dark: #343131;
+        --primary-medium: #A04747;
+        --primary-light: #D8A25E;
+        --primary-accent: #EEDF7A;
+    }
+
+    /* Three.js Canvas Container */
+    #threejs-canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 0;
+    }
+
+    .hero-content {
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Custom animations and styles for the landing page */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes float {
+        0% {
+            transform: translateY(0px) rotate(0deg);
+        }
+
+        50% {
+            transform: translateY(-20px) rotate(5deg);
+        }
+
+        100% {
+            transform: translateY(0px) rotate(0deg);
+        }
+    }
+
+    @keyframes pulse {
+        0% {
+            transform: scale(1);
+            opacity: 0.7;
+        }
+
+        50% {
+            transform: scale(1.05);
+            opacity: 1;
+        }
+
+        100% {
+            transform: scale(1);
+            opacity: 0.7;
+        }
+    }
+
+    @keyframes wave {
+        0% {
+            transform: translateX(0) translateY(0);
+        }
+
+        50% {
+            transform: translateX(-20px) translateY(-10px);
+        }
+
+        100% {
+            transform: translateX(0) translateY(0);
+        }
+    }
+
+    /* Redesigned hero section with new color palette */
+    .hero-section {
+        background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-medium) 100%);
+        color: white;
+        position: relative;
+        overflow: hidden;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Geometric background elements */
+    .geometric-shape {
+        position: absolute;
+        border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+        background: rgba(255, 255, 255, 0.05);
+        z-index: 0;
+    }
+
+    .shape-1 {
+        width: 400px;
+        height: 400px;
+        top: -150px;
+        right: -150px;
+        animation: pulse 20s infinite ease-in-out;
+    }
+
+    .shape-2 {
+        width: 250px;
+        height: 250px;
+        bottom: -80px;
+        left: -80px;
+        animation: pulse 15s infinite ease-in-out;
+        animation-delay: 2s;
+    }
+
+    .shape-3 {
+        width: 180px;
+        height: 180px;
+        top: 30%;
+        right: 25%;
+        animation: pulse 12s infinite ease-in-out;
+        animation-delay: 4s;
+    }
+
+    .supply-pattern {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        z-index: 0;
+    }
+
+    .supply-element {
+        position: absolute;
+        opacity: 0.15;
+        animation: float 8s infinite ease-in-out;
+        color: white;
+    }
+
+    /* Feature cards with new color scheme */
+    .feature-card {
+        transition: all 0.3s ease;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(52, 49, 49, 0.15);
+        background: white;
+        border: 1px solid var(--primary-accent);
+        overflow: hidden;
+        position: relative;
+        perspective: 1000px;
+    }
+
+    .card-3d-canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 80px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+        border-radius: 16px 16px 0 0;
+    }
+
+    .feature-card:hover .card-3d-canvas {
+        opacity: 1;
+    }
+
+    .feature-card:hover {
+        transform: translateY(-10px) rotateX(5deg) rotateY(2deg);
+        box-shadow: 0 15px 30px rgba(52, 49, 49, 0.25);
+        border-color: var(--primary-light);
+    }
+
+    .feature-icon {
+        width: 70px;
+        height: 70px;
+        background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-accent) 100%);
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 20px;
+    }
+
+    .feature-icon i {
+        font-size: 28px;
+        color: var(--primary-dark);
+    }
+
+    .stat-card {
+        background: linear-gradient(135deg, var(--primary-medium) 0%, var(--primary-dark) 100%);
+        border-radius: 16px;
+        box-shadow: 0 10px 25px rgba(52, 49, 49, 0.3);
+        color: white;
+        transition: all 0.3s ease;
+        position: relative;
+        perspective: 1000px;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px) rotateX(3deg) rotateY(3deg);
+        box-shadow: 0 15px 30px rgba(52, 49, 49, 0.4);
+    }
+
+    .animate-float {
+        animation: float 6s ease-in-out infinite;
+    }
+
+    .animate-fade-in-up {
+        animation: fadeInUp 0.8s ease-out forwards;
+    }
+
+    .delay-1 {
+        animation-delay: 0.1s;
+    }
+
+    .delay-2 {
+        animation-delay: 0.2s;
+    }
+
+    .delay-3 {
+        animation-delay: 0.3s;
+    }
+
+    .delay-4 {
+        animation-delay: 0.4s;
+    }
+
+    .delay-5 {
+        animation-delay: 0.5s;
+    }
+
+    .delay-6 {
+        animation-delay: 0.6s;
+    }
+
+    /* Buttons with new color scheme */
+    .btn-primary {
+        background: linear-gradient(to right, var(--primary-dark), var(--primary-medium));
+        border: none;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(52, 49, 49, 0.4);
+        border-radius: 50px;
+        font-weight: 600;
+        padding: 14px 32px;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 7px 20px rgba(52, 49, 49, 0.6);
+        background: linear-gradient(to right, var(--primary-medium), var(--primary-dark));
+    }
+
+    .btn-secondary {
+        background: transparent;
+        border: 2px solid white;
+        color: white;
+        transition: all 0.3s ease;
+        border-radius: 50px;
+        font-weight: 600;
+        padding: 14px 32px;
+    }
+
+    .btn-secondary:hover {
+        background: white;
+        color: var(--primary-dark);
+        transform: translateY(-3px);
+        box-shadow: 0 7px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .testimonial-card {
+        transition: all 0.3s ease;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(52, 49, 49, 0.1);
+        border: 1px solid var(--primary-accent);
+        position: relative;
+        perspective: 1000px;
+    }
+
+    .testimonial-card:hover {
+        transform: scale(1.02) rotateX(3deg) rotateY(3deg);
+        box-shadow: 0 10px 30px rgba(52, 49, 49, 0.2);
+        border-color: var(--primary-light);
+    }
+
+    /* Navigation styles with dedicated background */
+    .landing-nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        padding: 1.2rem 0;
+        transition: all 0.4s ease;
+        /* Dedicated background with the primary color scheme */
+        background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-medium) 100%);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 2px 20px rgba(52, 49, 49, 0.3);
+    }
+
+    /* Slight adjustment when scrolled */
+    .landing-nav.scrolled {
+        padding: 0.7rem 0;
+        box-shadow: 0 4px 25px rgba(52, 49, 49, 0.4);
+    }
+
+    /* Lightning effect for navigation links */
+    .nav-link {
+        color: white;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        position: relative;
+        padding: 0.6rem 1.2rem;
+        border-radius: 30px;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        font-size: 1.05rem;
+        overflow: hidden;
+    }
+
+    .nav-link::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg,
+                transparent,
+                rgba(238, 223, 122, 0.4),
+                rgba(216, 162, 94, 0.6),
+                rgba(238, 223, 122, 0.4),
+                transparent);
+        transition: 0.5s;
+        z-index: 1;
+    }
+
+    .nav-link:hover::before {
+        left: 100%;
+    }
+
+    .nav-link:hover {
+        color: var(--primary-accent);
+        background: rgba(255, 255, 255, 0.15);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(216, 162, 94, 0.4);
+    }
+
+    .nav-link::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 3px;
+        background: var(--primary-accent);
+        transition: width 0.3s ease;
+        border-radius: 2px;
+        z-index: 2;
+    }
+
+    .nav-link:hover::after {
+        width: 70%;
+    }
+
+    /* Lightning effect for buttons */
+    .btn-nav {
+        border-radius: 30px;
+        padding: 0.6rem 1.8rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        text-shadow: none;
+        font-size: 1.05rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .btn-login {
+        background: transparent;
+        border: 2px solid white;
+        color: white;
+    }
+
+    .btn-login::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg,
+                transparent,
+                rgba(255, 255, 255, 0.2),
+                rgba(255, 255, 255, 0.4),
+                rgba(255, 255, 255, 0.2),
+                transparent);
+        transition: 0.5s;
+    }
+
+    .btn-login:hover::before {
+        left: 100%;
+    }
+
+    .btn-login:hover {
+        background: white;
+        color: var(--primary-dark);
+        transform: translateY(-2px);
+        box-shadow: 0 7px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .btn-signup {
+        background: white;
+        color: var(--primary-dark);
+        box-shadow: 0 4px 15px rgba(52, 49, 49, 0.4);
+    }
+
+    .btn-signup::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg,
+                transparent,
+                rgba(216, 162, 94, 0.4),
+                rgba(238, 223, 122, 0.6),
+                rgba(216, 162, 94, 0.4),
+                transparent);
+        transition: 0.5s;
+    }
+
+    .btn-signup:hover::before {
+        left: 100%;
+    }
+
+    .btn-signup:hover {
+        background: var(--primary-light);
+        color: var(--primary-dark);
+        transform: translateY(-2px);
+        box-shadow: 0 7px 20px rgba(52, 49, 49, 0.6);
+    }
+
+    /* Mobile menu styles */
+    .mobile-menu {
+        background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-medium) 100%);
+        box-shadow: 0 10px 25px rgba(52, 49, 49, 0.3);
+        border-radius: 0 0 1.5rem 1.5rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .mobile-menu .nav-link {
+        color: white;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .mobile-menu .nav-link::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg,
+                transparent,
+                rgba(238, 223, 122, 0.4),
+                rgba(216, 162, 94, 0.6),
+                rgba(238, 223, 122, 0.4),
+                transparent);
+        transition: 0.5s;
+    }
+
+    .mobile-menu .nav-link:hover::before {
+        left: 100%;
+    }
+
+    .mobile-menu .btn-login {
+        border: 2px solid white;
+        color: white;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .mobile-menu .btn-login::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg,
+                transparent,
+                rgba(255, 255, 255, 0.2),
+                rgba(255, 255, 255, 0.4),
+                rgba(255, 255, 255, 0.2),
+                transparent);
+        transition: 0.5s;
+    }
+
+    .mobile-menu .btn-login:hover::before {
+        left: 100%;
+    }
+
+    .mobile-menu .btn-login:hover {
+        background: white;
+        color: var(--primary-dark);
+    }
+
+    .mobile-menu .btn-signup {
+        background: white;
+        color: var(--primary-dark);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .mobile-menu .btn-signup::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg,
+                transparent,
+                rgba(216, 162, 94, 0.4),
+                rgba(238, 223, 122, 0.6),
+                rgba(216, 162, 94, 0.4),
+                transparent);
+        transition: 0.5s;
+    }
+
+    .mobile-menu .btn-signup:hover::before {
+        left: 100%;
+    }
+
+    .mobile-menu .btn-signup:hover {
+        background: var(--primary-light);
+        color: var(--primary-dark);
+    }
+
+    /* Improved logo visibility */
+    .logo-text {
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        color: white;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+
+    /* CTA section with new colors */
+    .cta-section {
+        background: linear-gradient(135deg, var(--primary-medium) 0%, var(--primary-dark) 100%);
+        color: white;
+    }
+
+    /* Section headers */
+    .section-header {
+        position: relative;
+        margin-bottom: 2rem;
+    }
+
+    .section-header::after {
+        content: '';
+        position: absolute;
+        bottom: -15px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 80px;
+        height: 4px;
+        background: linear-gradient(to right, var(--primary-light), var(--primary-accent));
+        border-radius: 2px;
+    }
+
+    /* How it works steps */
+    .step-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 5px 15px rgba(52, 49, 49, 0.1);
+        border: 1px solid var(--primary-accent);
+        transition: all 0.3s ease;
+        padding: 2rem;
+        position: relative;
+        perspective: 1000px;
+    }
+
+    .step-card:hover {
+        transform: translateY(-5px) rotateX(4deg) rotateY(4deg);
+        box-shadow: 0 10px 25px rgba(52, 49, 49, 0.2);
+        border-color: var(--primary-light);
+    }
+
+    .step-number {
+        width: 50px;
+        height: 50px;
+        background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-accent) 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 1.2rem;
+        color: var(--primary-dark);
+        margin-bottom: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Redesigned Navigation -->
+<nav class="landing-nav">
+    <div class="container mx-auto px-4">
+        <div class="flex items-center justify-between">
+            <!-- Logo -->
+            <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-boxes text-2xl text-white"></i>
+                </div>
+                <span class="text-2xl font-bold logo-text">SmartSupply</span>
+            </div>
+
+            <!-- Desktop Navigation -->
+            <div class="hidden md:flex items-center space-x-3">
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#how-it-works" class="nav-link">How It Works</a>
+                <a href="#testimonials" class="nav-link">Testimonials</a>
+                <a href="#campus-info" class="nav-link">Campus Info</a>
+                <div class="ml-4 flex items-center space-x-4">
+                    <a href="{% url 'login' %}" class="btn-nav btn-login">Log In</a>
+                    <a href="{% url 'login' %}" class="btn-nav btn-signup">Get Started</a>
+                </div>
+            </div>
+
+            <!-- Mobile menu button -->
+            <div class="md:hidden">
+                <button id="mobile-menu-button" class="text-white focus:outline-none p-2">
+                    <i class="fas fa-bars text-2xl"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="mobile-menu md:hidden mt-4 rounded-lg p-5 hidden">
+            <div class="flex flex-col space-y-4">
+                <a href="#features" class="nav-link text-center">Features</a>
+                <a href="#how-it-works" class="nav-link text-center">How It Works</a>
+                <a href="#testimonials" class="nav-link text-center">Testimonials</a>
+                <a href="#campus-info" class="nav-link text-center">Campus Info</a>
+                <div class="flex flex-col space-y-4 pt-4 border-t border-white/20">
+                    <a href="{% url 'login' %}" class="btn-nav btn-login text-center">Log In</a>
+                    <a href="{% url 'login' %}" class="btn-nav btn-signup text-center">Get Started</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- Redesigned Hero Section -->
+<section class="hero-section py-32 md:py-40 relative">
+    <div class="hero-content">
+        <!-- Supply Management Themed Background Elements -->
+        <div class="supply-pattern">
+            <div class="supply-element animate-float"
+                style="top: 20%; left: 10%; font-size: 2.5rem; animation-delay: 0s;">
+                <i class="fas fa-box"></i>
+            </div>
+            <div class="supply-element animate-float"
+                style="top: 60%; right: 15%; font-size: 2rem; animation-delay: 2s;">
+                <i class="fas fa-barcode"></i>
+            </div>
+            <div class="supply-element animate-float"
+                style="top: 30%; right: 25%; font-size: 1.8rem; animation-delay: 4s;">
+                <i class="fas fa-warehouse"></i>
+            </div>
+            <div class="supply-element animate-float"
+                style="bottom: 20%; left: 20%; font-size: 2.2rem; animation-delay: 6s;">
+                <i class="fas fa-truck-loading"></i>
+            </div>
+            <div class="supply-element animate-float"
+                style="top: 40%; left: 30%; font-size: 1.8rem; animation-delay: 8s;">
+                <i class="fas fa-clipboard-list"></i>
+            </div>
+            <div class="supply-element animate-float"
+                style="top: 70%; left: 15%; font-size: 2rem; animation-delay: 3s;">
+                <i class="fas fa-qrcode"></i>
+            </div>
+            <div class="supply-element animate-float"
+                style="top: 25%; right: 10%; font-size: 1.6rem; animation-delay: 5s;">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="supply-element animate-float"
+                style="bottom: 30%; right: 20%; font-size: 2.1rem; animation-delay: 7s;">
+                <i class="fas fa-dolly"></i>
+            </div>
+        </div>
+
+        <div class="geometric-shape shape-1"></div>
+        <div class="geometric-shape shape-2"></div>
+        <div class="geometric-shape shape-3"></div>
+
+        <div class="container mx-auto px-4 text-center relative z-10 pt-16">
+            <h1 class="text-4xl md:text-6xl font-bold mb-6 animate-fade-in-up">
+                Smart Supply Management System
+            </h1>
+            <p class="text-xl md:text-2xl mb-10 max-w-3xl mx-auto opacity-90 animate-fade-in-up delay-1">
+                Streamline your inventory control with our intelligent supply management solution.
+                Track, manage, and optimize your supplies with ease.
+            </p>
+            <div class="flex flex-col sm:flex-row justify-center gap-6 animate-fade-in-up delay-2">
+                <a href="{% url 'login' %}" class="btn-primary">
+                    Get Started Free
+                </a>
+                <a href="#features" class="btn-secondary">
+                    Learn More
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Stats Section -->
+<section class="py-20 bg-gradient-to-r from-[#f8f9fa] to-[#e9ecef]">
+    <div class="container mx-auto px-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div class="stat-card p-8 text-center animate-fade-in-up">
+                <div class="text-4xl md:text-5xl font-bold mb-3">{{ total_supplies|default:120|intcomma }}</div>
+                <div class="text-xl">Supply Items</div>
+                <p class="mt-3 opacity-90">Managed across campus</p>
+            </div>
+            <div class="stat-card p-8 text-center animate-fade-in-up delay-1">
+                <div class="text-4xl md:text-5xl font-bold mb-3">{{ total_requests|default:850|intcomma }}</div>
+                <div class="text-xl">Requests Processed</div>
+                <p class="mt-3 opacity-90">This academic year</p>
+            </div>
+            <div class="stat-card p-8 text-center animate-fade-in-up delay-2">
+                <div class="text-4xl md:text-5xl font-bold mb-3">{{ active_users|default:45 }}</div>
+                <div class="text-xl">Campus Users</div>
+                <p class="mt-3 opacity-90">Staff and departments</p>
+            </div>
+            <div class="stat-card p-8 text-center animate-fade-in-up delay-3">
+                <div class="text-4xl md:text-5xl font-bold mb-3">{{ satisfaction_rate|default:98 }}%</div>
+                <div class="text-xl">User Satisfaction</div>
+                <p class="mt-3 opacity-90">Based on feedback</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section id="features" class="py-20 bg-white">
+    <div class="container mx-auto px-4">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl md:text-4xl font-bold text-gray-800 section-header">Powerful Features</h2>
+            <p class="text-xl text-gray-600 max-w-3xl mx-auto mt-6">
+                Everything you need to efficiently manage your supply inventory
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+            <!-- Feature 1 -->
+            <div class="feature-card p-8 animate-fade-in-up">
+                <div class="feature-icon">
+                    <i class="fas fa-qrcode"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-800 mb-4">QR Code Scanning</h3>
+                <p class="text-gray-600 mb-4">
+                    Instantly track and manage inventory with our QR code scanning system.
+                    Scan items in and out with your mobile device.
+                </p>
+                <a href="#"
+                    class="text-[#343131] font-semibold flex items-center hover:text-[#A04747] transition-colors">
+                    Learn more <i class="fas fa-arrow-right ml-2 text-sm"></i>
+                </a>
+            </div>
+
+            <!-- Feature 2 -->
+            <div class="feature-card p-8 animate-fade-in-up delay-1">
+                <div class="feature-icon">
+                    <i class="fas fa-bell"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-800 mb-4">Smart Alerts</h3>
+                <p class="text-gray-600 mb-4">
+                    Receive automatic notifications when stock levels are low or when items
+                    need to be reordered to prevent shortages.
+                </p>
+                <a href="#"
+                    class="text-[#343131] font-semibold flex items-center hover:text-[#A04747] transition-colors">
+                    Learn more <i class="fas fa-arrow-right ml-2 text-sm"></i>
+                </a>
+            </div>
+
+            <!-- Feature 3 -->
+            <div class="feature-card p-8 animate-fade-in-up delay-2">
+                <div class="feature-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-800 mb-4">Analytics & Reports</h3>
+                <p class="text-gray-600 mb-4">
+                    Gain valuable insights with detailed analytics and customizable reports
+                    to optimize your inventory management.
+                </p>
+                <a href="#"
+                    class="text-[#343131] font-semibold flex items-center hover:text-[#A04747] transition-colors">
+                    Learn more <i class="fas fa-arrow-right ml-2 text-sm"></i>
+                </a>
+            </div>
+
+            <!-- Feature 4 -->
+            <div class="feature-card p-8 animate-fade-in-up delay-3">
+                <div class="feature-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-800 mb-4">Multi-User Roles</h3>
+                <p class="text-gray-600 mb-4">
+                    Role-based access control for administrators, staff, and department users
+                    with appropriate permissions for each role.
+                </p>
+                <a href="#"
+                    class="text-[#343131] font-semibold flex items-center hover:text-[#A04747] transition-colors">
+                    Learn more <i class="fas fa-arrow-right ml-2 text-sm"></i>
+                </a>
+            </div>
+
+            <!-- Feature 5 -->
+            <div class="feature-card p-8 animate-fade-in-up delay-4">
+                <div class="feature-icon">
+                    <i class="fas fa-mobile-alt"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-800 mb-4">Mobile Friendly</h3>
+                <p class="text-gray-600 mb-4">
+                    Access your supply management system from any device.
+                    Our responsive design works seamlessly on desktops, tablets, and phones.
+                </p>
+                <a href="#"
+                    class="text-[#343131] font-semibold flex items-center hover:text-[#A04747] transition-colors">
+                    Learn more <i class="fas fa-arrow-right ml-2 text-sm"></i>
+                </a>
+            </div>
+
+            <!-- Feature 6 -->
+            <div class="feature-card p-8 animate-fade-in-up delay-5">
+                <div class="feature-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-800 mb-4">Secure & Reliable</h3>
+                <p class="text-gray-600 mb-4">
+                    Enterprise-grade security to protect your data with regular backups
+                    and compliance with industry standards.
+                </p>
+                <a href="#"
+                    class="text-[#343131] font-semibold flex items-center hover:text-[#A04747] transition-colors">
+                    Learn more <i class="fas fa-arrow-right ml-2 text-sm"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- How It Works Section -->
+<section id="how-it-works" class="py-20 bg-gradient-to-br from-[#f8f9fa] to-[#e9ecef]">
+    <div class="container mx-auto px-4">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl md:text-4xl font-bold text-gray-800 section-header">How It Works</h2>
+            <p class="text-xl text-gray-600 max-w-3xl mx-auto mt-6">
+                Simple steps to transform your supply management process
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="step-card animate-fade-in-up">
+                <div class="step-number">1</div>
+                <h3 class="text-2xl font-bold text-gray-800 mb-4">Add Your Supplies</h3>
+                <p class="text-gray-600 mb-4">
+                    Easily add all your supplies to the system with detailed information
+                    including categories, quantities, and minimum stock levels.
+                </p>
+                <div class="flex justify-center mt-4">
+                    <div class="w-16 h-16 bg-[#D8A25E] rounded-full flex items-center justify-center">
+                        <i class="fas fa-plus text-2xl text-[#343131]"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-card animate-fade-in-up delay-1">
+                <div class="step-number">2</div>
+                <h3 class="text-2xl font-bold text-gray-800 mb-4">Scan & Track</h3>
+                <p class="text-gray-600 mb-4">
+                    Use QR codes to instantly track inventory movements.
+                    Scan items in and out to maintain accurate real-time stock levels.
+                </p>
+                <div class="flex justify-center mt-4">
+                    <div class="w-16 h-16 bg-[#D8A25E] rounded-full flex items-center justify-center">
+                        <i class="fas fa-qrcode text-2xl text-[#343131]"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-card animate-fade-in-up delay-2">
+                <div class="step-number">3</div>
+                <h3 class="text-2xl font-bold text-gray-800 mb-4">Analyze & Optimize</h3>
+                <p class="text-gray-600 mb-4">
+                    Use detailed reports and analytics to identify trends,
+                    optimize stock levels, and make data-driven decisions.
+                </p>
+                <div class="flex justify-center mt-4">
+                    <div class="w-16 h-16 bg-[#D8A25E] rounded-full flex items-center justify-center">
+                        <i class="fas fa-chart-pie text-2xl text-[#343131]"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Campus Info Section -->
+<section id="campus-info" class="py-20 bg-white">
+    <div class="container mx-auto px-4">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl md:text-4xl font-bold text-gray-800 section-header">JHCSC Dumingag Campus</h2>
+            <p class="text-xl text-gray-600 max-w-3xl mx-auto mt-6">
+                Efficient supply management for our academic community
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div>
+                <h3 class="text-2xl font-bold text-gray-800 mb-6">About Our Campus System</h3>
+                <p class="text-gray-600 mb-6 text-lg">
+                    The SmartSupply system is specifically designed for JHCSC Dumingag Campus to streamline
+                    our supply management processes. Our solution helps departments efficiently request,
+                    track, and manage essential supplies while providing administrators with comprehensive
+                    oversight and reporting capabilities.
+                </p>
+                <p class="text-gray-600 mb-6 text-lg">
+                    As a non-profit educational institution, we prioritize resource optimization and
+                    transparent processes to better serve our faculty, staff, and students.
+                </p>
+
+                <div class="grid grid-cols-2 gap-6 mt-10">
+                    <div class="flex items-start">
+                        <div
+                            class="w-12 h-12 bg-[#D8A25E] rounded-full flex items-center justify-center mr-4 flex-shrink-0">
+                            <i class="fas fa-building text-[#343131]"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg mb-2">Campus Wide</h4>
+                            <p class="text-gray-600">Serving all departments and units</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start">
+                        <div
+                            class="w-12 h-12 bg-[#D8A25E] rounded-full flex items-center justify-center mr-4 flex-shrink-0">
+                            <i class="fas fa-graduation-cap text-[#343131]"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg mb-2">Academic Focus</h4>
+                            <p class="text-gray-600">Supporting educational excellence</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-lg p-8 border border-[#EEDF7A]">
+                <h3 class="text-2xl font-bold text-gray-800 mb-6">Campus Departments</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg">
+                        <div class="w-10 h-10 bg-[#A04747] rounded-full flex items-center justify-center mr-4">
+                            <i class="fas fa-book text-white"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-gray-800">Academic Affairs</h4>
+                            <p class="text-gray-600 text-sm">Instructional materials and resources</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg">
+                        <div class="w-10 h-10 bg-[#A04747] rounded-full flex items-center justify-center mr-4">
+                            <i class="fas fa-flask text-white"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-gray-800">Laboratories</h4>
+                            <p class="text-gray-600 text-sm">Specialized equipment and supplies</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg">
+                        <div class="w-10 h-10 bg-[#A04747] rounded-full flex items-center justify-center mr-4">
+                            <i class="fas fa-desktop text-white"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-gray-800">IT Services</h4>
+                            <p class="text-gray-600 text-sm">Technology and computing supplies</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center p-4 bg-gray-50 rounded-lg">
+                        <div class="w-10 h-10 bg-[#A04747] rounded-full flex items-center justify-center mr-4">
+                            <i class="fas fa-utensils text-white"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-xl text-gray-800">Cafeteria</h4>
+                            <p class="text-gray-600 text-sm">Food service supplies and equipment</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 p-6 bg-gradient-to-r from-[#343131] to-[#A04747] rounded-xl text-white">
+                    <h4 class="font-bold text-xl mb-3">Need Assistance?</h4>
+                    <p class="mb-4">Contact our Campus Supply Management Team for support:</p>
+                    <div class="flex items-center">
+                        <i class="fas fa-envelope mr-3"></i>
+                        <span>supply@jhcs.edu</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Testimonials Section -->
+<section id="testimonials" class="py-20 bg-gradient-to-br from-[#f8f9fa] to-[#e9ecef]">
+    <div class="container mx-auto px-4">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl md:text-4xl font-bold text-gray-800 section-header">What Our Users Say</h2>
+            <p class="text-xl text-gray-600 max-w-3xl mx-auto mt-6">
+                Hear from organizations that have transformed their supply management
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div class="testimonial-card p-8 animate-fade-in-up">
+                <div class="flex items-center mb-6">
+                    <div class="text-amber-400">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
+                </div>
+                <p class="text-gray-600 mb-8 text-lg italic">
+                    "This system has completely transformed how we manage our inventory.
+                    The QR scanning feature alone has saved us countless hours of manual tracking."
+                </p>
+                <div class="flex items-center">
+                    <div class="w-16 h-16 bg-[#D8A25E] rounded-full mr-5 flex items-center justify-center">
+                        <span class="text-2xl font-bold text-[#343131]">VG</span>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-xl text-gray-800">Vicpher Garnada</h4>
+                        <p class="text-gray-600">Operations Manager</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="testimonial-card p-8 animate-fade-in-up delay-1">
+                <div class="flex items-center mb-6">
+                    <div class="text-amber-400">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
+                </div>
+                <p class="text-gray-600 mb-8 text-lg italic">
+                    "The smart alerts have prevented stockouts multiple times.
+                    We've reduced our emergency orders by 70% since implementing this system."
+                </p>
+                <div class="flex items-center">
+                    <div class="w-16 h-16 bg-[#D8A25E] rounded-full mr-5 flex items-center justify-center">
+                        <span class="text-2xl font-bold text-[#343131]">MC</span>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-xl text-gray-800">Melisa Chatto</h4>
+                        <p class="text-gray-600">Supply Chain Director</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="testimonial-card p-8 animate-fade-in-up delay-2">
+                <div class="flex items-center mb-6">
+                    <div class="text-amber-400">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star-half-alt"></i>
+                    </div>
+                </div>
+                <p class="text-gray-600 mb-8 text-lg italic">
+                    "The reporting features have given us insights we never had before.
+                    We've optimized our inventory levels and reduced carrying costs by 30%."
+                </p>
+                <div class="flex items-center">
+                    <div class="w-16 h-16 bg-[#D8A25E] rounded-full mr-5 flex items-center justify-center">
+                        <span class="text-2xl font-bold text-[#343131]">VC</span>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-xl text-gray-800">Vincent Chatto</h4>
+                        <p class="text-gray-600">Logistics Coordinator</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Pricing Section -->
+<section id="pricing" class="py-20 cta-section">
+    <div class="container mx-auto px-4 text-center">
+        <h2 class="text-3xl md:text-4xl font-bold mb-6">Streamline Supply Management at JHCSC Dumingag Campus</h2>
+        <p class="text-xl mb-12 max-w-3xl mx-auto opacity-90">
+            Join our campus community in efficiently managing supplies and resources with our dedicated system.
+        </p>
+        <div class="flex flex-col sm:flex-row justify-center gap-6">
+            <a href="{% url 'login' %}" class="btn-primary">
+                Access Campus System
+            </a>
+            <a href="#features" class="btn-secondary">
+                Learn More
+            </a>
+        </div>
+
+        <div class="mt-16 max-w-4xl mx-auto">
+            <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
+                <h3 class="text-2xl font-bold mb-6">Why Choose Our Campus Supply System?</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+                    <div class="flex items-start">
+                        <div
+                            class="w-10 h-10 bg-[#EEDF7A] rounded-full flex items-center justify-center mr-4 flex-shrink-0">
+                            <i class="fas fa-check text-[#343131]"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg mb-2">Campus Focused</h4>
+                            <p class="opacity-90">Designed specifically for JHCSC Dumingag Campus needs and workflows
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex items-start">
+                        <div
+                            class="w-10 h-10 bg-[#EEDF7A] rounded-full flex items-center justify-center mr-4 flex-shrink-0">
+                            <i class="fas fa-check text-[#343131]"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg mb-2">Dedicated Support</h4>
+                            <p class="opacity-90">Campus IT team ready to assist with any questions or issues</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start">
+                        <div
+                            class="w-10 h-10 bg-[#EEDF7A] rounded-full flex items-center justify-center mr-4 flex-shrink-0">
+                            <i class="fas fa-check text-[#343131]"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg mb-2">Continuous Improvement</h4>
+                            <p class="opacity-90">Regular updates based on campus feedback and requirements</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="bg-gray-900 text-white py-12">
+    <div class="container mx-auto px-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div>
+                <div class="flex items-center space-x-3 mb-6">
+                    <div class="w-12 h-12 bg-[#D8A25E] rounded-xl flex items-center justify-center">
+                        <i class="fas fa-boxes text-2xl text-[#343131]"></i>
+                    </div>
+                    <span class="text-2xl font-bold">SmartSupply</span>
+                </div>
+                <p class="text-gray-400 mb-6">
+                    Streamlining inventory management for organizations worldwide.
+                </p>
+                <div class="flex space-x-4">
+                    <a href="#" class="text-gray-400 hover:text-[#EEDF7A] transition-colors">
+                        <i class="fab fa-twitter"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-[#EEDF7A] transition-colors">
+                        <i class="fab fa-facebook"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-[#EEDF7A] transition-colors">
+                        <i class="fab fa-linkedin"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-[#EEDF7A] transition-colors">
+                        <i class="fab fa-instagram"></i>
+                    </a>
+                </div>
+            </div>
+
+            <div>
+                <h4 class="text-lg font-bold mb-6">Product</h4>
+                <ul class="space-y-3">
+                    <li><a href="#" class="text-gray-400 hover:text-[#EEDF7A] transition-colors">Features</a></li>
+                    <li><a href="#" class="text-gray-400 hover:text-[#EEDF7A] transition-colors">Solutions</a></li>
+                    <li><a href="#" class="text-gray-400 hover:text-[#EEDF7A] transition-colors">Pricing</a></li>
+                    <li><a href="#" class="text-gray-400 hover:text-[#EEDF7A] transition-colors">Demo</a></li>
+                </ul>
+            </div>
+
+            <div>
+                <h4 class="text-lg font-bold mb-6">Resources</h4>
+                <ul class="space-y-3">
+                    <li><a href="#" class="text-gray-400 hover:text-[#EEDF7A] transition-colors">Documentation</a></li>
+                    <li><a href="#" class="text-gray-400 hover:text-[#EEDF7A] transition-colors">Guides</a></li>
+                    <li><a href="#" class="text-gray-400 hover:text-[#EEDF7A] transition-colors">Blog</a></li>
+                    <li><a href="#" class="text-gray-400 hover:text-[#EEDF7A] transition-colors">Support</a></li>
+                </ul>
+            </div>
+
+            <div>
+                <h4 class="text-lg font-bold mb-6">Company</h4>
+                <ul class="space-y-3">
+                    <li><a href="#" class="text-gray-400 hover:text-[#EEDF7A] transition-colors">About</a></li>
+                    <li><a href="#" class="text-gray-400 hover:text-[#EEDF7A] transition-colors">Careers</a></li>
+                    <li><a href="#" class="text-gray-400 hover:text-[#EEDF7A] transition-colors">Contact</a></li>
+                    <li><a href="#" class="text-gray-400 hover:text-[#EEDF7A] transition-colors">Partners</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="border-t border-gray-800 mt-12 pt-8 text-center text-gray-500">
+            <p>&copy; 2025 SmartSupply. All rights reserved.</p>
+        </div>
+    </div>
+</footer>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+    // Three.js Scene Setup
+    function initThreeJS() {
+        const container = document.querySelector('.hero-section');
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+
+        // Scene, Camera, Renderer
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x2a2a28);
+
+        const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+        camera.position.z = 5;
+
+        const canvas = document.createElement('canvas');
+        canvas.id = 'threejs-canvas';
+        container.insertBefore(canvas, container.firstChild);
+
+        const renderer = new THREE.WebGLRenderer({
+            canvas: canvas,
+            antialias: true,
+            alpha: true
+        });
+        renderer.setSize(width, height);
+        renderer.setPixelRatio(window.devicePixelRatio);
+
+        // Create Floating Boxes
+        const boxes = [];
+        const boxGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+
+        for (let i = 0; i < 8; i++) {
+            const material = new THREE.MeshPhongMaterial({
+                color: new THREE.Color().setHSL(Math.random() * 0.3 + 0.1, 0.7, 0.6),
+                emissive: new THREE.Color().setHSL(Math.random() * 0.3 + 0.1, 0.5, 0.3),
+                shininess: 100,
+                wireframe: false
+            });
+
+            const box = new THREE.Mesh(boxGeometry, material);
+            box.position.set(
+                (Math.random() - 0.5) * 10,
+                (Math.random() - 0.5) * 10,
+                (Math.random() - 0.5) * 5
+            );
+
+            box.rotation.set(
+                Math.random() * Math.PI,
+                Math.random() * Math.PI,
+                Math.random() * Math.PI
+            );
+
+            box.velocity = {
+                x: (Math.random() - 0.5) * 0.02,
+                y: (Math.random() - 0.5) * 0.02,
+                z: (Math.random() - 0.5) * 0.02
+            };
+
+            scene.add(box);
+            boxes.push(box);
+        }
+
+        // Floating Spheres
+        const spheres = [];
+        const sphereGeometry = new THREE.SphereGeometry(0.3, 32, 32);
+
+        for (let i = 0; i < 5; i++) {
+            const material = new THREE.MeshPhongMaterial({
+                color: new THREE.Color().setHSL(0.1 + Math.random() * 0.2, 0.8, 0.55),
+                emissive: new THREE.Color().setHSL(0.1 + Math.random() * 0.2, 0.6, 0.4),
+                shininess: 150
+            });
+
+            const sphere = new THREE.Mesh(sphereGeometry, material);
+            sphere.position.set(
+                (Math.random() - 0.5) * 12,
+                (Math.random() - 0.5) * 12,
+                (Math.random() - 0.5) * 6
+            );
+
+            sphere.velocity = {
+                x: (Math.random() - 0.5) * 0.015,
+                y: (Math.random() - 0.5) * 0.015,
+                z: (Math.random() - 0.5) * 0.015
+            };
+
+            scene.add(sphere);
+            spheres.push(sphere);
+        }
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+
+        const pointLight1 = new THREE.PointLight(0xD8A25E, 1, 100);
+        pointLight1.position.set(5, 5, 5);
+        scene.add(pointLight1);
+
+        const pointLight2 = new THREE.PointLight(0xA04747, 0.8, 100);
+        pointLight2.position.set(-5, -5, 5);
+        scene.add(pointLight2);
+
+        // Mouse interaction
+        let mouseX = 0;
+        let mouseY = 0;
+
+        document.addEventListener('mousemove', (event) => {
+            mouseX = (event.clientX / width) * 2 - 1;
+            mouseY = -(event.clientY / height) * 2 + 1;
+        });
+
+        // Resize handler
+        function onWindowResize() {
+            const newWidth = container.clientWidth;
+            const newHeight = container.clientHeight;
+
+            camera.aspect = newWidth / newHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(newWidth, newHeight);
+        }
+
+        window.addEventListener('resize', onWindowResize);
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Rotate and move boxes
+            boxes.forEach(box => {
+                box.rotation.x += box.velocity.x * 2;
+                box.rotation.y += box.velocity.y * 2;
+                box.rotation.z += box.velocity.z * 2;
+
+                box.position.x += box.velocity.x;
+                box.position.y += box.velocity.y;
+                box.position.z += box.velocity.z;
+
+                // Bounce off boundaries
+                if (Math.abs(box.position.x) > 6) box.velocity.x *= -1;
+                if (Math.abs(box.position.y) > 6) box.velocity.y *= -1;
+                if (Math.abs(box.position.z) > 3) box.velocity.z *= -1;
+            });
+
+            // Move spheres
+            spheres.forEach(sphere => {
+                sphere.position.x += sphere.velocity.x;
+                sphere.position.y += sphere.velocity.y;
+                sphere.position.z += sphere.velocity.z;
+
+                // Bounce off boundaries
+                if (Math.abs(sphere.position.x) > 7) sphere.velocity.x *= -1;
+                if (Math.abs(sphere.position.y) > 7) sphere.velocity.y *= -1;
+                if (Math.abs(sphere.position.z) > 4) sphere.velocity.z *= -1;
+            });
+
+            // Update camera based on mouse
+            camera.position.x = mouseX * 0.5;
+            camera.position.y = mouseY * 0.5;
+            camera.lookAt(scene.position);
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    }
+
+    // Card hover effects with Three.js particles
+    function initCardEffects() {
+        const cards = document.querySelectorAll('.feature-card, .stat-card, .step-card, .testimonial-card');
+
+        cards.forEach(card => {
+            // Create canvas for 3D effects
+            const canvas = document.createElement('canvas');
+            canvas.className = 'card-3d-canvas';
+            canvas.width = card.offsetWidth;
+            canvas.height = 80;
+
+            // Insert at the top of card
+            if (card.querySelector('.card-3d-canvas')) {
+                card.querySelector('.card-3d-canvas').remove();
+            }
+            card.insertBefore(canvas, card.firstChild);
+
+            const ctx = canvas.getContext('2d');
+            let particles = [];
+
+            card.addEventListener('mouseenter', () => {
+                // Create particles on hover
+                for (let i = 0; i < 8; i++) {
+                    particles.push({
+                        x: Math.random() * canvas.width,
+                        y: Math.random() * 40 + 20,
+                        vx: (Math.random() - 0.5) * 3,
+                        vy: (Math.random() - 0.5) * 3,
+                        life: 1,
+                        color: [
+                            '#D8A25E',
+                            '#A04747',
+                            '#EEDF7A'
+                        ][Math.floor(Math.random() * 3)],
+                        size: Math.random() * 3 + 2
+                    });
+                }
+            });
+
+            function animateParticles() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                particles = particles.filter(p => p.life > 0);
+
+                particles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.1; // gravity
+                    p.life -= 0.02;
+
+                    ctx.fillStyle = p.color;
+                    ctx.globalAlpha = p.life;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                ctx.globalAlpha = 1;
+
+                if (particles.length > 0) {
+                    requestAnimationFrame(animateParticles);
+                }
+            }
+
+            // Trigger animation on hover
+            card.addEventListener('mouseenter', animateParticles);
+        });
+    }
+
+    // Add scroll animation for elements
+    document.addEventListener('DOMContentLoaded', function () {
+        // Initialize Three.js
+        initThreeJS();
+
+        // Initialize card hover effects
+        initCardEffects();
+
+        // Simple fade-in animation on scroll
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('opacity-100');
+                    entry.target.classList.remove('opacity-0');
+                }
+            });
+        }, observerOptions);
+
+        // Observe elements with fade-in class
+        document.querySelectorAll('.feature-card, .stat-card, .testimonial-card, .step-card').forEach(el => {
+            el.classList.add('opacity-0', 'transition-opacity', 'duration-500');
+            observer.observe(el);
+        });
+
+        // Simplified navbar scroll effect - only for padding adjustment
+        const navbar = document.querySelector('.landing-nav');
+
+        // Function to update navbar state
+        function updateNavbarState() {
+            // Check if we're scrolled
+            const isScrolled = window.scrollY > 10;
+
+            // Update classes based on state
+            if (isScrolled) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        }
+
+        // Set initial state
+        updateNavbarState();
+
+        // Update on scroll
+        window.addEventListener('scroll', updateNavbarState);
+
+        // Mobile menu toggle
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+
+        if (mobileMenuButton && mobileMenu) {
+            mobileMenuButton.addEventListener('click', function () {
+                mobileMenu.classList.toggle('hidden');
+                const icon = mobileMenuButton.querySelector('i');
+                if (mobileMenu.classList.contains('hidden')) {
+                    icon.classList.remove('fa-times');
+                    icon.classList.add('fa-bars');
+                } else {
+                    icon.classList.remove('fa-bars');
+                    icon.classList.add('fa-times');
+                }
+            });
+        }
+
+        // Close mobile menu when clicking on a link
+        const mobileLinks = document.querySelectorAll('#mobile-menu a');
+        mobileLinks.forEach(link => {
+            link.addEventListener('click', function () {
+                mobileMenu.classList.add('hidden');
+                const icon = mobileMenuButton.querySelector('i');
+                if (icon) {
+                    icon.classList.remove('fa-times');
+                    icon.classList.add('fa-bars');
+                }
+            });
+        });
+
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                const targetId = this.getAttribute('href');
+                if (targetId !== '#') {
+                    e.preventDefault();
+                    const targetElement = document.querySelector(targetId);
+                    if (targetElement) {
+                        window.scrollTo({
+                            top: targetElement.offsetTop - 80,
+                            behavior: 'smooth'
+                        });
+                    }
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

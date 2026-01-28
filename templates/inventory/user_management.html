@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+
+{% block title %}User Management - Smart Supply Management System{% endblock %}
+
+{% block content %}
+ <!-- Page Header -->
+<div class="mb-8">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">User Management</h1>
+            <p class="text-gray-600">Manage user approvals and account status</p>
+        </div>
+        <div class="mt-4 md:mt-0 flex gap-2">
+            <a href="{% url 'export_users_csv' %}?search={{ search }}" 
+               class="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
+                <i class="fas fa-file-csv mr-2"></i> Export CSV
+            </a>
+            <a href="{% url 'export_users_pdf' %}?search={{ search }}" 
+               class="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors">
+                <i class="fas fa-file-pdf mr-2"></i> Export PDF
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Search Form -->
+<div class="bg-white rounded-xl shadow-sm p-6 mb-8 border border-gray-200">
+    <form method="get" class="flex items-center space-x-4">
+        <div class="flex-1">
+            <input type="text" 
+                   name="search" 
+                   placeholder="Search users by name, username, or email..." 
+                   value="{{ search }}"
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A04747] focus:border-[#A04747]">
+        </div>
+        <button type="submit" class="px-4 py-2 bg-[#343131] text-white rounded-lg hover:bg-[#A04747] transition-colors">
+            <i class="fas fa-search mr-2"></i>Search
+        </button>
+        <a href="{% url 'user_management' %}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
+            <i class="fas fa-times mr-2"></i>Clear
+        </a>
+    </form>
+</div>
+
+<!-- Pending Approvals Section -->
+<div class="bg-white rounded-xl shadow-sm p-6 mb-8 border border-gray-200">
+    <div class="flex items-center justify-between mb-6">
+        <h2 class="text-xl font-semibold text-gray-800">Pending Approvals</h2>
+        <span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium">
+            {{ pending_users.count }} pending
+        </span>
+    </div>
+    
+    {% if pending_users %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Registered</th>
+                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for user in pending_users %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-10 w-10">
+                                        <div class="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                            <i class="fas fa-user text-gray-600"></i>
+                                        </div>
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900">{{ user.username }}</div>
+                                        <div class="text-sm text-gray-500">{{ user.email }}</div>
+                                        <div class="text-sm text-gray-500">{{ user.first_name }} {{ user.last_name }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                    {% if user.role == 'admin' %}bg-purple-100 text-purple-800
+                                    {% elif user.role == 'gso_staff' %}bg-blue-100 text-blue-800
+                                    {% else %}bg-green-100 text-green-800{% endif %}">
+                                    {{ user.get_role_display }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ user.department|default:"-" }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ user.date_joined|date:"M d, Y" }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <div class="flex justify-end space-x-2">
+                                    <form method="post" action="{% url 'approve_user' user.id %}" class="inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="approve">
+                                        <button type="submit" 
+                                                class="px-3 py-1 bg-green-100 text-green-800 rounded hover:bg-green-200 transition-colors"
+                                                onclick="return confirm('Are you sure you want to approve this user?')">
+                                            <i class="fas fa-check mr-1"></i>Approve
+                                        </button>
+                                    </form>
+                                    <form method="post" action="{% url 'approve_user' user.id %}" class="inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="reject">
+                                        <button type="submit" 
+                                                class="px-3 py-1 bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors"
+                                                onclick="return confirm('Are you sure you want to reject this user?')">
+                                            <i class="fas fa-times mr-1"></i>Reject
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="text-center py-8">
+            <i class="fas fa-user-check text-gray-300 text-4xl mb-4"></i>
+            <h3 class="text-lg font-medium text-gray-900 mb-1">No pending approvals</h3>
+            <p class="text-gray-500">All users are currently approved.</p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- All Users Section -->
+<div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+    <div class="flex items-center justify-between mb-6">
+        <h2 class="text-xl font-semibold text-gray-800">All Users</h2>
+        <span class="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm font-medium">
+            {{ all_users.count }} total users
+        </span>
+    </div>
+    
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Registered</th>
+                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for user in all_users %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 h-10 w-10">
+                                    <div class="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                        <i class="fas fa-user text-gray-600"></i>
+                                    </div>
+                                </div>
+                                <div class="ml-4">
+                                    <div class="text-sm font-medium text-gray-900">{{ user.username }}</div>
+                                    <div class="text-sm text-gray-500">{{ user.email }}</div>
+                                    <div class="text-sm text-gray-500">{{ user.first_name }} {{ user.last_name }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                {% if user.role == 'admin' %}bg-purple-100 text-purple-800
+                                {% elif user.role == 'gso_staff' %}bg-blue-100 text-blue-800
+                                {% else %}bg-green-100 text-green-800{% endif %}">
+                                {{ user.get_role_display }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ user.department|default:"-" }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if user.approval_status == 'pending' %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                    Pending Approval
+                                </span>
+                            {% elif user.approval_status == 'approved' %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                    Approved
+                                </span>
+                            {% else %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                    Rejected
+                                </span>
+                            {% endif %}
+                            {% if not user.is_active %}
+                                <span class="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                                    Inactive
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ user.date_joined|date:"M d, Y" }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <form method="post" action="{% url 'toggle_user_active' user.id %}" class="inline">
+                                {% csrf_token %}
+                                <button type="submit" 
+                                        class="px-3 py-1 {% if user.is_active %}bg-gray-100 text-gray-800 hover:bg-gray-200{% else %}bg-green-100 text-green-800 hover:bg-green-200{% endif %} rounded transition-colors"
+                                        onclick="return confirm('Are you sure you want to {% if user.is_active %}deactivate{% else %}activate{% endif %} this user?')">
+                                    {% if user.is_active %}
+                                        <i class="fas fa-user-slash mr-1"></i>Deactivate
+                                    {% else %}
+                                        <i class="fas fa-user-check mr-1"></i>Activate
+                                    {% endif %}
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

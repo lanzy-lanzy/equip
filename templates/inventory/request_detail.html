@@ -1,0 +1,424 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}
+    {% if is_batch %}Batch Request Details{% else %}Request Details{% endif %} - Smart Supply Management System
+{% endblock %}
+
+{% block content %}
+<style>
+    .qr-zoom-container {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: zoom-in;
+    }
+    .qr-zoom-container:hover {
+        transform: scale(1.05);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+    .zoom-modal-backdrop {
+        background-color: rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(8px);
+        transition: opacity 0.3s ease;
+    }
+    .zoom-modal-content {
+        transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+</style>
+<!-- Page Header -->
+<div class="mb-8">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">
+                {% if is_batch %}Batch Request Summary{% else %}Request Details{% endif %}
+            </h1>
+            <p class="text-gray-600">
+                {% if is_batch %}
+                    Managing a group of {{ batch_items.count }} supply requests
+                {% else %}
+                    View and manage supply request #{{ supply_request.request_id }}
+                {% endif %}
+            </p>
+        </div>
+        <div class="mt-4 md:mt-0 flex space-x-2">
+            <a href="{% url 'request_list' %}"
+                class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors shadow-sm">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Back to List
+            </a>
+        </div>
+    </div>
+</div>
+
+{% if is_batch %}
+    <!-- BATCH VIEW DESIGN -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+        <!-- Batch Items List -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+                    <h2 class="font-bold text-gray-800">Items in this Batch</h2>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Total: {{ batch_items.count }} items</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead>
+                            <tr class="bg-gray-50/30">
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Item Details</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Qty</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">ID</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            {% for item in batch_items %}
+                            <tr class="{% if item.pk == supply_request.pk %}bg-blue-50/40{% else %}hover:bg-gray-50/30{% endif %} transition-colors">
+                                <td class="px-6 py-4">
+                                    <div class="flex flex-col">
+                                        <span class="font-semibold text-gray-900">{{ item.supply.name }}</span>
+                                        <span class="text-xs text-gray-500">{{ item.supply.category.name }}</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-700 font-medium">
+                                    {{ item.quantity_requested|intcomma }} <span class="text-gray-400 font-normal">{{ item.supply.unit }}</span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                        {% if item.dynamic_status == 'pending' %}bg-amber-100 text-amber-800
+                                        {% elif item.dynamic_status == 'approved' %}bg-sky-100 text-sky-800
+                                        {% elif item.dynamic_status == 'released' %}bg-emerald-100 text-emerald-800
+                                        {% elif item.dynamic_status == 'partially_returned' %}bg-purple-100 text-purple-800
+                                        {% elif item.dynamic_status == 'returned' %}bg-indigo-100 text-indigo-800
+                                        {% elif item.dynamic_status == 'returned_with_issues' %}bg-orange-100 text-orange-800
+                                        {% elif item.dynamic_status == 'rejected' %}bg-rose-100 text-rose-800{% endif %}">
+                                        {% if item.dynamic_status == 'returned' %}<i class="fas fa-check-circle mr-1 text-[10px]"></i>{% endif %}
+                                        {% if item.dynamic_status == 'returned_with_issues' %}<i class="fas fa-exclamation-triangle mr-1 text-[10px]"></i>{% endif %}
+                                        {% if item.dynamic_status == 'partially_returned' %}<i class="fas fa-hourglass-half mr-1 text-[10px]"></i>{% endif %}
+                                        {{ item.display_status }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-right text-xs text-gray-400 font-mono">
+                                    #{{ item.request_id|slice:"-8:" }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Info & QR -->
+        <div class="space-y-6">
+            <!-- Batch Metadata -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Request Information</h3>
+                <div class="space-y-4">
+                    <div class="flex items-start">
+                        <div class="p-2 bg-indigo-50 rounded-lg mr-3">
+                            <i class="fas fa-user text-indigo-500"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 font-medium">Requested By</p>
+                            <p class="text-sm font-bold text-gray-900">{{ supply_request.user.get_full_name | default:supply_request.user.username }}</p>
+                            <p class="text-xs text-gray-400">{{ supply_request.user.department|default:"No Department" }}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start">
+                        <div class="p-2 bg-amber-50 rounded-lg mr-3">
+                            <i class="fas fa-calendar-alt text-amber-500"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 font-medium">Request Date</p>
+                            <p class="text-sm font-bold text-gray-900">{{ supply_request.created_at|date:"M d, Y" }}</p>
+                            <p class="text-xs text-gray-400">{{ supply_request.created_at|time:"H:i" }}</p>
+                        </div>
+                    </div>
+                    {% if supply_request.approved_at and supply_request.approved_by %}
+                    <div class="flex items-start">
+                        <div class="p-2 bg-sky-50 rounded-lg mr-3">
+                            <i class="fas fa-check-circle text-sky-500"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 font-medium">Authorized By</p>
+                            <p class="text-sm font-bold text-gray-900">{{ supply_request.approved_by.get_full_name | default:supply_request.approved_by.username }}</p>
+                            <p class="text-xs text-gray-400">{{ supply_request.approved_at|date:"M d, Y" }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Batch QR Code -->
+            {% if unified_qr_url %}
+            <div class="bg-indigo-600 rounded-2xl shadow-lg border border-indigo-700 p-6 text-white overflow-hidden relative">
+                <div class="absolute -right-4 -top-4 opacity-10">
+                    <i class="fas fa-qrcode text-8xl"></i>
+                </div>
+                <h3 class="font-bold text-lg mb-4 flex items-center">
+                    <i class="fas fa-qrcode mr-2"></i> Unified QR Code
+                </h3>
+                <div class="bg-white p-4 rounded-xl mb-4 qr-zoom-container" onclick="openZoomModal('{{ unified_qr_url }}')">
+                    <img id="batch-qr-img" src="{{ unified_qr_url }}" alt="Batch QR Code" class="w-full h-auto rounded-lg">
+                </div>
+                <div class="space-y-3">
+                    <a href="{{ unified_qr_url }}" download="batch-qr-{{ supply_request.batch_group_id }}.png"
+                        class="w-full inline-flex items-center justify-center px-4 py-2.5 bg-white text-indigo-700 text-sm font-bold rounded-xl hover:bg-indigo-50 transition-colors shadow-sm">
+                        <i class="fas fa-file-image mr-2"></i> Download Unified QR (PNG)
+                    </a>
+                    <a href="{% url 'download_batch_qrcodes' supply_request.batch_group_id %}"
+                        class="w-full inline-flex items-center justify-center px-4 py-2.5 bg-indigo-500 text-white text-sm font-bold rounded-xl hover:bg-indigo-400 transition-colors shadow-sm border border-indigo-400">
+                        <i class="fas fa-file-pdf mr-2"></i> Download All QR Codes (PDF)
+                    </a>
+                    <p class="text-[10px] text-indigo-100 text-center uppercase tracking-widest font-semibold opacity-80">
+                        Scan items individually for better tracking
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Purpose and Notes (Full Width for Batch) -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-8">
+        <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Request Purpose</h3>
+        <div class="bg-gray-50 rounded-xl p-6 border border-gray-100">
+            {% if supply_request.purpose|slice:":12" == "[BORROWING] " %}
+                <p class="text-gray-800 leading-relaxed">{{ supply_request.purpose|slice:"12:" }}</p>
+            {% else %}
+                <p class="text-gray-800 leading-relaxed">{{ supply_request.purpose }}</p>
+            {% endif %}
+        </div>
+        {% if supply_request.notes %}
+        <div class="mt-6 pt-6 border-t border-gray-100 text-gray-400">
+            <h3 class="text-sm font-bold uppercase tracking-wider mb-3">Staff Notes</h3>
+            <p class="text-gray-700">{{ supply_request.notes }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+{% else %}
+    <!-- INDIVIDUAL VIEW DESIGN -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+        <!-- Main Request Info -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8 pb-8 border-b border-gray-100">
+                    <div>
+                        <span class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1 block">Individual Request</span>
+                        <h2 class="text-2xl font-black text-gray-900">#{{ supply_request.request_id }}</h2>
+                    </div>
+                    <div class="mt-4 md:mt-0">
+                        <span class="inline-flex items-center px-4 py-1.5 rounded-full text-sm font-bold
+                           {% if supply_request.status == 'pending' %}bg-amber-100 text-amber-800
+                           {% elif supply_request.status == 'approved' %}bg-sky-100 text-sky-800
+                           {% elif supply_request.status == 'released' %}bg-emerald-100 text-emerald-800
+                           {% elif supply_request.status == 'rejected' %}bg-rose-100 text-rose-800{% endif %}">
+                           {{ supply_request.get_status_display }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-y-10 gap-x-8">
+                    <div class="flex items-start">
+                        <div class="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center mr-4 flex-shrink-0">
+                            <i class="fas fa-box text-indigo-500 text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Supply Item</h3>
+                            <p class="text-lg font-black text-gray-900 leading-tight">{{ supply_request.supply.name }}</p>
+                            <p class="text-sm text-gray-500 font-medium">{{ supply_request.supply.category.name }}</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start">
+                        <div class="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center mr-4 flex-shrink-0">
+                            <i class="fas fa-layer-group text-emerald-500 text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Quantity Requested</h3>
+                            <p class="text-lg font-black text-gray-900 leading-tight">{{ supply_request.quantity_requested }} <span class="text-gray-500 font-bold ml-1">{{ supply_request.supply.unit }}</span></p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start">
+                        <div class="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center mr-4 flex-shrink-0">
+                            <i class="fas fa-user text-amber-500 text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Requested By</h3>
+                            <p class="text-lg font-black text-gray-900 leading-tight">{{ supply_request.user.get_full_name | default:supply_request.user.username }}</p>
+                            <p class="text-sm text-gray-500 font-medium">{{ supply_request.user.department|default:"No Department" }}</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start">
+                        <div class="w-12 h-12 bg-rose-50 rounded-2xl flex items-center justify-center mr-4 flex-shrink-0">
+                            <i class="fas fa-calendar-alt text-rose-500 text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Request Date</h3>
+                            <p class="text-lg font-black text-gray-900 leading-tight">{{ supply_request.created_at|date:"M d, Y" }}</p>
+                            <p class="text-sm text-gray-500 font-medium">{{ supply_request.created_at|time:"H:i" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Actions & QR (Simple) -->
+        <div class="space-y-6">
+            {% if supply_request.borrowing_qr_code %}
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 text-center">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6">Borrowing QR Code</h3>
+                <div class="bg-gray-50 p-6 rounded-3xl mx-auto mb-6 inline-block qr-zoom-container" onclick="openZoomModal('{{ supply_request.borrowing_qr_code.url }}')">
+                    <img src="{{ supply_request.borrowing_qr_code.url }}" alt="QR" class="w-32 h-32 mx-auto">
+                </div>
+                <a href="{{ supply_request.borrowing_qr_code.url }}" download="qr-{{ supply_request.request_id }}.png"
+                    class="w-full inline-flex items-center justify-center px-4 py-3 bg-indigo-600 text-white text-sm font-black rounded-xl hover:bg-indigo-700 transition-colors shadow-md">
+                    <i class="fas fa-download mr-2"></i> Download
+                </a>
+            </div>
+            {% endif %}
+
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Quick Actions</h3>
+                <div class="bg-gray-50 rounded-xl p-4 border border-gray-100 mb-4">
+                    <h4 class="text-sm font-black text-gray-800 mb-1">Purpose</h4>
+                    <p class="text-xs text-gray-600 italic">"{{ supply_request.purpose|truncatechars:100 }}"</p>
+                </div>
+                <a href="{% url 'supply_detail' supply_request.supply.pk %}"
+                    class="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-200 text-gray-700 text-xs font-bold rounded-xl hover:bg-gray-50 transition-colors">
+                    <i class="fas fa-eye mr-2"></i> View Item Info
+                </a>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<!-- Unified Action Footer (for both Batch and Individual) -->
+{% if user.role in 'admin,gso_staff' %}
+    <div class="bg-white rounded-2xl shadow-lg border-2 border-indigo-50 p-8 mt-12">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="text-center md:text-left">
+                <h3 class="text-xl font-black text-gray-900">Administrative Controls</h3>
+                <p class="text-sm text-gray-500 font-medium">Review and update the status of this {% if is_batch %}batch request{% else %}request{% endif %}</p>
+            </div>
+            
+            <div class="flex flex-wrap items-center justify-center md:justify-end gap-3 shrink-0">
+                {% if supply_request.status == 'pending' %}
+                    <form method="post" action="{% url 'request_approve' supply_request.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="approve">
+                        <button type="submit"
+                            class="inline-flex items-center px-8 py-3 bg-emerald-600 text-white text-sm font-black rounded-xl hover:bg-emerald-700 transition-all hover:scale-105 shadow-md shadow-emerald-100">
+                            <i class="fas fa-check-circle mr-2"></i> Approve {% if is_batch %}Entire Batch{% endif %}
+                        </button>
+                    </form>
+
+                    <button onclick="showRejectModal()"
+                        class="inline-flex items-center px-8 py-3 bg-red-600 text-white text-sm font-black rounded-xl hover:bg-red-700 transition-all hover:scale-105 shadow-md shadow-red-100">
+                        <i class="fas fa-times-circle mr-2"></i> Reject {% if is_batch %}Batch{% endif %}
+                    </button>
+                {% elif supply_request.status == 'approved' %}
+                    {% if not supply_request.purpose|slice:":12" == "[BORROWING] " %}
+                        <form method="post" action="{% url 'request_release' supply_request.pk %}">
+                            {% csrf_token %}
+                            <button type="submit"
+                                class="inline-flex items-center px-8 py-3 bg-indigo-600 text-white text-sm font-black rounded-xl hover:bg-indigo-700 transition-all hover:scale-105 shadow-md shadow-indigo-100">
+                                <i class="fas fa-shipping-fast mr-2"></i> Release Supplies
+                            </button>
+                        </form>
+                    {% else %}
+                        <div class="flex items-center text-sky-600 font-bold bg-sky-50 px-6 py-3 rounded-2xl">
+                            <i class="fas fa-info-circle mr-3 text-xl"></i>
+                            Waiting for borrower to scan QR code
+                        </div>
+                    {% endif %}
+                {% else %}
+                   <div class="text-gray-400 font-bold italic py-3">
+                       No further actions available for {{ supply_request.status }} status.
+                   </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<!-- Reject Request Modal -->
+<div id="reject-modal" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden">
+        <div class="bg-rose-600 p-6 text-white flex items-center justify-between">
+            <h3 class="text-xl font-black">Reject Request</h3>
+            <button onclick="closeRejectModal()" class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <form method="post" action="{% url 'request_reject' supply_request.pk %}" class="p-8">
+            {% csrf_token %}
+            <div class="mb-6">
+                <label for="reason" class="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Reason for Rejection *</label>
+                <textarea id="reason" name="reason" rows="4"
+                    class="w-full px-4 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 transition-all outline-none"
+                    placeholder="Provide a clear reason for the user..." required></textarea>
+            </div>
+
+            <div class="flex gap-3">
+                <button type="button" onclick="closeRejectModal()"
+                    class="flex-1 py-3 bg-gray-100 text-gray-700 text-sm font-black rounded-2xl hover:bg-gray-200 transition-colors">
+                    Cancel
+                </button>
+                <button type="submit"
+                    class="flex-2 px-8 py-3 bg-rose-600 text-white text-sm font-black rounded-2xl hover:bg-rose-700 transition-all shadow-lg shadow-rose-100">
+                    Confirm Rejection
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- QR Zoom Modal -->
+<div id="qr-zoom-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 zoom-modal-backdrop" onclick="closeZoomModal()">
+    <div class="relative max-w-2xl w-full flex flex-col items-center">
+        <button class="absolute -top-12 right-0 text-white text-3xl hover:text-gray-300 transition-colors">
+            <i class="fas fa-times"></i>
+        </button>
+        <div class="zoom-modal-content bg-white p-8 rounded-3xl shadow-2xl">
+            <img id="zoomed-qr-img" src="" alt="Zoomed QR" class="max-w-full h-auto rounded-xl">
+            <p class="mt-6 text-center text-gray-500 font-bold uppercase tracking-widest text-xs">Scan or Download to Process</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openZoomModal(url) {
+        document.getElementById('zoomed-qr-img').src = url;
+        const modal = document.getElementById('qr-zoom-modal');
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            modal.querySelector('.zoom-modal-content').style.transform = 'scale(1)';
+        }, 10);
+    }
+
+    function closeZoomModal() {
+        const modal = document.getElementById('qr-zoom-modal');
+        modal.querySelector('.zoom-modal-content').style.transform = 'scale(0.9)';
+        setTimeout(() => {
+            modal.classList.add('hidden');
+        }, 200);
+    }
+
+    function showRejectModal() {
+        document.getElementById('reject-modal').classList.remove('hidden');
+    }
+
+    function closeRejectModal() {
+        document.getElementById('reject-modal').classList.add('hidden');
+    }
+
+    // Close modal when clicking outside
+    document.getElementById('reject-modal').addEventListener('click', function (e) {
+        if (e.target === this) closeRejectModal();
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,422 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}{{ supply.name }} - Smart Supply Management System{% endblock %}
+
+{% block content %}
+<!-- Low Stock Alert Banner -->
+{% if supply.is_low_stock and user.role in 'admin,gso_staff' %}
+<div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+    <div class="flex">
+        <div class="flex-shrink-0">
+            <i class="fas fa-exclamation-triangle text-yellow-400 text-xl"></i>
+        </div>
+        <div class="ml-3">
+            <p class="text-sm text-yellow-700">
+                <span class="font-medium">Low Stock Alert!</span>
+                This item is below the minimum stock level ({{ supply.quantity }}/{{ supply.min_stock_level }}).
+                Consider restocking soon.
+            </p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Breadcrumb -->
+<nav class="flex mb-6" aria-label="Breadcrumb">
+    <ol class="inline-flex items-center space-x-1 md:space-x-3">
+        <li class="inline-flex items-center">
+            <a href="{% url 'dashboard' %}" class="text-gray-700 hover:text-indigo-600 inline-flex items-center">
+                <i class="fas fa-home mr-2"></i>
+                Dashboard
+            </a>
+        </li>
+        <li>
+            <div class="flex items-center">
+                <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
+                <a href="{% url 'supply_list' %}" class="text-gray-700 hover:text-indigo-600">Supplies</a>
+            </div>
+        </li>
+        <li>
+            <div class="flex items-center">
+                <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
+                <span class="text-gray-500">{{ supply.name }}</span>
+            </div>
+        </li>
+    </ol>
+</nav>
+
+<!-- Supply Header -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+    <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
+        <div class="flex items-start space-x-4 flex-1">
+            {% if supply.image %}
+            <div class="w-24 h-24 bg-indigo-100 rounded-xl flex-shrink-0 overflow-hidden">
+                <img src="{{ supply.image.url }}" alt="{{ supply.name }}" class="w-full h-full object-cover">
+            </div>
+            {% else %}
+            <div class="w-24 h-24 bg-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <i class="fas fa-box text-3xl text-indigo-600"></i>
+            </div>
+            {% endif %}
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">{{ supply.name }}</h1>
+                <p class="text-gray-600">{{ supply.category.name }}</p>
+                <div class="flex items-center space-x-4 mt-2">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                        {% if supply.stock_status == 'out_of_stock' %}bg-red-100 text-red-800
+                        {% elif supply.stock_status == 'low_stock' %}bg-yellow-100 text-yellow-800
+                        {% else %}bg-green-100 text-green-800{% endif %}">
+                        {% if supply.stock_status == 'out_of_stock' %}Out of Stock
+                        {% elif supply.stock_status == 'low_stock' %}Low Stock
+                        {% else %}In Stock{% endif %}
+                    </span>
+                    {% if supply.is_low_stock %}
+                    <i class="fas fa-exclamation-triangle text-yellow-500" title="Low Stock"></i>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4 md:mt-0 flex space-x-3">
+            {% if user.role in 'admin,gso_staff' %}
+            <a href="{% url 'supply_edit' supply.pk %}"
+                class="inline-flex items-center px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-lg hover:bg-yellow-700 transition-colors">
+                <i class="fas fa-edit mr-2"></i>
+                Edit
+            </a>
+            {% endif %}
+
+
+
+            {% if user.role in 'admin,gso_staff' %}
+            <a href="{% url 'supply_restock' supply.pk %}"
+                class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                <i class="fas fa-plus-circle mr-2"></i>
+                Add Stock
+            </a>
+            {% endif %}
+
+            {% if user.role in 'admin,gso_staff' %}
+            <a href="{% url 'equipment_instance_list' supply.pk %}"
+                class="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors">
+                <i class="fas fa-microchip mr-2"></i>
+                Instances ({{ supply.instances.count }})
+            </a>
+            {% endif %}
+
+            <button onclick="showQRCode()"
+                class="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
+                <i class="fas fa-qrcode mr-2"></i>
+                QR Code
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Supply Details -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Main Info -->
+    <div class="lg:col-span-2 space-y-6">
+        <!-- Basic Information -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Supply Information</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500 mb-2">Description</h3>
+                    <p class="text-gray-900">{{ supply.description }}</p>
+                </div>
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500 mb-2">Location</h3>
+                    <p class="text-gray-900">{{ supply.location }}</p>
+                </div>
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500 mb-2">Unit</h3>
+                    <p class="text-gray-900">{{ supply.unit }}</p>
+                </div>
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500 mb-2">Cost per Unit</h3>
+                    <p class="text-gray-900">₱{{ supply.cost_per_unit|intcomma }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Purchase Information -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-receipt text-blue-600 mr-2"></i>
+                Purchase Information
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500 mb-2">Serial Number</h3>
+                    <p class="text-gray-900">
+                        {% if supply.serial_number %}
+                        <code class="px-2 py-1 bg-gray-100 rounded">{{ supply.serial_number }}</code>
+                        {% else %}
+                        <span class="text-gray-400">Not provided</span>
+                        {% endif %}
+                    </p>
+                </div>
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500 mb-2">Date Purchased</h3>
+                    <p class="text-gray-900">
+                        {% if supply.date_purchased %}
+                        {{ supply.date_purchased|date:"M d, Y" }}
+                        {% else %}
+                        <span class="text-gray-400">Not provided</span>
+                        {% endif %}
+                    </p>
+                </div>
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500 mb-2">Total Purchase Amount</h3>
+                    <p class="text-gray-900">
+                        {% if supply.amount %}
+                        <span class="text-lg font-semibold text-green-600">₱{{ supply.amount|intcomma }}</span>
+                        {% else %}
+                        <span class="text-gray-400">Not provided</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stock Information -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Stock Information</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="text-center p-4 bg-blue-50 rounded-lg">
+                    <p class="text-3xl font-bold text-blue-600">{{ supply.quantity|intcomma }}</p>
+                    <p class="text-sm text-gray-600 mt-1">Total Stock</p>
+                </div>
+                <div class="text-center p-4 bg-yellow-50 rounded-lg">
+                    <p class="text-3xl font-bold text-yellow-600">{{ supply.min_stock_level|intcomma }}</p>
+                    <p class="text-sm text-gray-600 mt-1">Minimum Level</p>
+                </div>
+                <div class="text-center p-4 
+                    {% if available_quantity <= 0 %}bg-red-50
+                    {% elif available_quantity < supply.min_stock_level %}bg-yellow-50
+                    {% else %}bg-green-50{% endif %} rounded-lg">
+                    <p class="text-3xl font-bold 
+                        {% if available_quantity <= 0 %}text-red-600
+                        {% elif available_quantity < supply.min_stock_level %}text-yellow-600
+                        {% else %}text-green-600{% endif %}">
+                        {{ available_quantity|intcomma }}
+                    </p>
+                    <p class="text-sm text-gray-600 mt-1">Available (Remaining)</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Transactions -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Recent Transactions</h2>
+            <div class="space-y-3">
+                {% for transaction in recent_transactions %}
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center
+                                {% if transaction.transaction_type == 'in' %}bg-green-100 text-green-600
+                                {% elif transaction.transaction_type == 'out' %}bg-red-100 text-red-600
+                                {% else %}bg-yellow-100 text-yellow-600{% endif %}">
+                            <i class="fas fa-{% if transaction.transaction_type == 'in' %}arrow-down
+                                    {% elif transaction.transaction_type == 'out' %}arrow-up
+                                    {% else %}exchange-alt{% endif %} text-sm"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">
+                                {{ transaction.get_transaction_type_display }}
+                            </p>
+                            <p class="text-xs text-gray-500">{{ transaction.performed_by.username }}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm font-medium text-gray-900">
+                            {{ transaction.quantity|floatformat:0|intcomma }} units
+                        </p>
+                        <p class="text-xs text-gray-500">{{ transaction.created_at|date:"M d, Y" }}</p>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-gray-500 text-center py-4">No recent transactions</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="space-y-6">
+        <!-- Product Image -->
+        {% if supply.image %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Product Image</h3>
+            <div class="text-center">
+                <img src="{{ supply.image.url }}" alt="{{ supply.name }}"
+                    class="mx-auto mb-4 max-w-full h-auto rounded-lg border border-gray-300">
+                <p class="text-sm text-gray-600 mb-4">{{ supply.name }}</p>
+                <a href="{{ supply.image.url }}" download
+                    class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+                    <i class="fas fa-download mr-2"></i>
+                    Download Image
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- QR Code -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">QR Code</h3>
+            {% if supply.qr_code %}
+            <div class="text-center">
+                <img src="{{ supply.qr_code.url }}" alt="QR Code" class="mx-auto mb-4 max-w-full h-auto">
+                <p class="text-sm text-gray-600 mb-4">Scan to track this supply</p>
+                <a href="{{ supply.qr_code.url }}" download
+                    class="inline-flex items-center px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors">
+                    <i class="fas fa-download mr-2"></i>
+                    Download QR Code
+                </a>
+            </div>
+            {% else %}
+            <div class="text-center p-4 bg-gray-50 rounded-lg">
+                <i class="fas fa-qrcode text-4xl text-gray-300 mb-2"></i>
+                <p class="text-gray-500">QR Code not generated</p>
+                {% if user.role in 'admin,gso_staff' %}
+                <button onclick="generateQRCode()"
+                    class="mt-2 text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                    Generate QR Code
+                </button>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
+            <div class="space-y-3">
+                {% if user.role == 'department_user' %}
+                <a href="{% url 'request_create' %}?supply={{ supply.id }}"
+                    class="block w-full text-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+                    <i class="fas fa-clipboard-list mr-2"></i>
+                    Request This Supply
+                </a>
+                {% endif %}
+
+                <a href="{% url 'supply_list' %}"
+                    class="block w-full text-center px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors">
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    Back to List
+                </a>
+                {% if user.role == 'admin' %}
+                <form method="post" action="{% url 'supply_delete' supply.pk %}"
+                    onsubmit="return confirm('Are you sure you want to delete this supply? This action cannot be undone.');">
+                    {% csrf_token %}
+                    <button type="submit"
+                        class="w-full mt-2 text-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors">
+                        <i class="fas fa-trash mr-2"></i>
+                        Delete Supply
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recent Scans -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Recent QR Scans</h3>
+            <div class="space-y-3">
+                {% for scan in recent_scans %}
+                <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center
+                            {% if scan.action == 'scan' %}bg-blue-100 text-blue-600
+                            {% elif scan.action == 'issue' %}bg-green-100 text-green-600
+                            {% else %}bg-yellow-100 text-yellow-600{% endif %}">
+                        <i class="fas fa-{% if scan.action == 'scan' %}qrcode
+                                {% elif scan.action == 'issue' %}arrow-up
+                                {% else %}arrow-down{% endif %} text-sm"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm font-medium text-gray-900">
+                            {{ scan.get_action_display }}
+                        </p>
+                        <p class="text-xs text-gray-500">{{ scan.scanned_by.username }}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs text-gray-500">{{ scan.timestamp|timesince }} ago</p>
+                        <p class="text-xs text-gray-400">{{ scan.location }}</p>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-gray-500 text-center py-4">No recent scans</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- QR Code Modal -->
+<div id="qr-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-800">QR Code</h3>
+            <button onclick="closeQRModal()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <div class="text-center">
+            {% if supply.qr_code %}
+            <img src="{{ supply.qr_code.url }}" alt="QR Code" class="mx-auto mb-4 max-w-full h-auto">
+            <p class="text-sm text-gray-600 mb-4">Supply: {{ supply.name }}</p>
+            <p class="text-xs text-gray-500 mb-4">ID: {{ supply.id }}</p>
+            <a href="{{ supply.qr_code.url }}" download="supply_{{ supply.id }}_qr.png"
+                class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+                <i class="fas fa-download mr-2"></i>
+                Download QR Code
+            </a>
+            {% else %}
+            <div class="p-4 bg-gray-50 rounded-lg">
+                <i class="fas fa-qrcode text-4xl text-gray-300 mb-2"></i>
+                <p class="text-gray-500 mb-4">QR Code not generated</p>
+                <form id="generate-qr-form" method="post" action="{% url 'generate_qr_code' supply.pk %}">
+                    {% csrf_token %}
+                    <button type="submit"
+                        class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+                        <i class="fas fa-qrcode mr-2"></i>
+                        Generate QR Code
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    function showQRCode() {
+        document.getElementById('qr-modal').classList.remove('hidden');
+    }
+
+    function closeQRModal() {
+        document.getElementById('qr-modal').classList.add('hidden');
+    }
+
+    // Close modal on outside click
+    document.getElementById('qr-modal').addEventListener('click', function (e) {
+        if (e.target === this) {
+            closeQRModal();
+        }
+    });
+
+    function generateQRCode() {
+        // Submit form to generate QR code
+        document.getElementById('generate-qr-form').submit();
+    }
+
+    // Close modal on outside click
+    document.getElementById('qr-modal').addEventListener('click', function (e) {
+        if (e.target === this) {
+            closeQRModal();
+        }
+    });
+</script>
+{% endblock %}

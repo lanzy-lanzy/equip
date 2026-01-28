@@ -1,0 +1,420 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Batch Return Items - Smart Supply Management System{% endblock %}
+
+{% block content %}
+<style>
+    .scanner-container {
+        position: relative;
+        background: #0f172a;
+        border-radius: 1rem;
+        overflow: hidden;
+        aspect-ratio: 16/9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .scanner-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+    }
+    .scan-region-highlight {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 180px;
+        height: 180px;
+        margin-left: -90px;
+        margin-top: -90px;
+        border: 3px solid #6366f1;
+        box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.4);
+        border-radius: 16px;
+    }
+    .row-highlight {
+        animation: highlightPulse 2s ease-in-out;
+    }
+    @keyframes highlightPulse {
+        0% { background-color: transparent; }
+        20% { background-color: #fef9c3; }
+        100% { background-color: transparent; }
+    }
+</style>
+
+<div x-data="batchReturnManager()" x-init="initScanner()">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800 mb-2">Batch Return Items</h1>
+                <p class="text-gray-600">Process returns for all items in this batch. Scan QR code or search to find items.</p>
+            </div>
+            <div class="mt-4 md:mt-0 flex space-x-3">
+                <button @click="toggleScanner()" 
+                        class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+                        :class="{ 'bg-red-600 hover:bg-red-700': scannerActive }">
+                    <i class="fas" :class="scannerActive ? 'fa-video-slash mr-2' : 'fa-qrcode mr-2'"></i>
+                    <span x-text="scannerActive ? 'Stop Scanner' : 'Start Scanner'"></span>
+                </button>
+                <a href="{% url 'borrowed_items_list' %}"
+                    class="inline-flex items-center px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors">
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    Back to List
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scanner & Search Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <!-- Scanner Panel -->
+        <div class="lg:col-span-1" x-show="scannerActive" x-transition>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                <h3 class="text-sm font-semibold text-gray-800 mb-3 flex items-center">
+                    <i class="fas fa-camera mr-2 text-indigo-500"></i>
+                    Scan Item QR Code
+                </h3>
+                <div class="scanner-container">
+                    <video id="scanner-video" class="w-full h-full object-cover" playsinline></video>
+                    <div class="scanner-overlay">
+                        <div class="scan-region-highlight"></div>
+                    </div>
+                    <div x-show="!scannerReady" class="absolute inset-0 flex items-center justify-center bg-slate-900 text-white text-xs">
+                        Initializing camera...
+                    </div>
+                </div>
+                <div class="mt-2 text-center">
+                    <p class="text-[10px] text-gray-500 font-medium">Point camera at the item's QR code (INSTANCE-XX)</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search & Info Panel -->
+        <div :class="scannerActive ? 'lg:col-span-2' : 'lg:col-span-3'" x-transition:all>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 h-full flex flex-col justify-between">
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-800 mb-4">Quick Search & Filter</h3>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" x-model="searchQuery" @input="handleSearch()"
+                            placeholder="Enter Serial Number, Model Name, or Instance Code..."
+                            class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    </div>
+                    <div class="mt-4 flex flex-wrap gap-2" id="search-suggestions" x-show="searchQuery.length > 2">
+                        <!-- Search suggestions could go here -->
+                    </div>
+                </div>
+
+                <div class="mt-6 bg-blue-50 rounded-xl p-4 border border-blue-100">
+                    <div class="flex">
+                        <i class="fas fa-info-circle text-blue-500 mt-0.5 mr-3"></i>
+                        <div class="text-xs text-blue-800 space-y-1">
+                            <p><strong>Batch ID:</strong> {{ batch_group_id }}</p>
+                            <p><strong>Items:</strong> {{ borrowed_items|length }} items total</p>
+                            <p class="mt-1">Scanning or searching will highlight the corresponding row and scroll it into view.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Return Form -->
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Borrower</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID / Serial / Model</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Return Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for item in borrowed_items %}
+                        <tr id="item-row-{{ item.id }}" 
+                            class="hover:bg-gray-50 transition-colors" 
+                            x-data="{ itemStatus: 'returned' }"
+                            :class="{ 'bg-yellow-50': isHighlighted('{{ item.id }}') }"
+                            data-instance-id="{{ item.equipment_instance.id|default:'' }}"
+                            data-instance-code="{{ item.equipment_instance.instance_code|default:''|lower }}"
+                            data-serial="{{ item.equipment_instance.serial_number|default:item.supply.serial_number|default:''|lower }}"
+                            data-model="{{ item.equipment_instance.model_name|default:''|lower }}"
+                            data-brand="{{ item.equipment_instance.brand|default:''|lower }}"
+                            data-name="{{ item.supply.name|lower }}">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-10 w-10">
+                                        <div class="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center">
+                                            <i class="fas fa-box text-gray-400"></i>
+                                        </div>
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900">{{ item.supply.name }}</div>
+                                        <div class="text-sm text-gray-500">{{ item.supply.category.name }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">
+                                    {{ item.borrower.get_full_name|default:item.borrower.username }}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {% if item.equipment_instance %}
+                                <div class="flex items-center">
+                                    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 text-purple-800 mr-2">
+                                        <i class="fas fa-microchip mr-1"></i>{{ item.equipment_instance.instance_code }}
+                                    </span>
+                                </div>
+                                <div class="text-[10px] text-gray-500 mt-1">
+                                    {% if item.equipment_instance.brand %}{{ item.equipment_instance.brand }}{% endif %}
+                                    {% if item.equipment_instance.model_name %} - {{ item.equipment_instance.model_name }}{% endif %}
+                                    {% if item.equipment_instance.serial_number %}<br>SN: {{ item.equipment_instance.serial_number }}{% endif %}
+                                </div>
+                                {% elif item.supply.serial_number %}
+                                <span class="font-mono text-xs bg-gray-100 px-2 py-1 rounded">{{ item.supply.serial_number }}</span>
+                                {% else %}
+                                <span class="text-gray-400">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
+                                {{ item.borrowed_quantity }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <select name="status_{{ item.id }}" x-model="itemStatus"
+                                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                    :class="{ 
+                                        'bg-green-50 border-green-300': itemStatus === 'returned',
+                                        'bg-orange-50 border-orange-300': itemStatus === 'damaged',
+                                        'bg-red-50 border-red-300': itemStatus === 'lost'
+                                    }">
+                                    <option value="returned">✓ Good Condition</option>
+                                    <option value="damaged">⚠ Damaged</option>
+                                    <option value="lost">✕ Lost</option>
+                                </select>
+                            </td>
+                            <td class="px-6 py-4">
+                                <input type="text" name="notes_{{ item.id }}"
+                                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                    placeholder="Notes (required for damaged/lost)" :required="itemStatus !== 'returned'"
+                                    :class="{ 'border-orange-300': itemStatus === 'damaged', 'border-red-300': itemStatus === 'lost' }">
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                                No items to process in this batch.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center justify-end space-x-4 pt-4">
+            <a href="{% url 'borrowed_items_list' %}"
+                class="px-6 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+                Cancel
+            </a>
+            <button type="submit"
+                class="px-8 py-2 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all shadow-md">
+                <i class="fas fa-check mr-2"></i>
+                Process All Returns
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Legend -->
+<div class="mt-8 bg-gray-50 rounded-xl p-6">
+    <h3 class="text-sm font-semibold text-gray-800 mb-4">Return Status Legend</h3>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="flex items-center">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mr-2">
+                <i class="fas fa-check-circle mr-1"></i> Good Condition
+            </span>
+            <span class="text-sm text-gray-600">Item returned to available stock</span>
+        </div>
+        <div class="flex items-center">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 mr-2">
+                <i class="fas fa-exclamation-triangle mr-1"></i> Damaged
+            </span>
+            <span class="text-sm text-gray-600">Marked as <strong>Maintenance</strong></span>
+        </div>
+        <div class="flex items-center">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 mr-2">
+                <i class="fas fa-times-circle mr-1"></i> Lost
+            </span>
+            <span class="text-sm text-gray-600">Marked as <strong>Retired</strong></span>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<script>
+    function batchReturnManager() {
+        return {
+            scannerActive: false,
+            scannerReady: false,
+            scannerStream: null,
+            searchQuery: '',
+            highlightedId: null,
+            lastScannedData: null,
+
+            initScanner() {
+                // Not active by default
+            },
+
+            async toggleScanner() {
+                if (this.scannerActive) {
+                    this.stopScanner();
+                } else {
+                    await this.startScanner();
+                }
+            },
+
+            async startScanner() {
+                try {
+                    const constraints = { video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } };
+                    this.scannerStream = await navigator.mediaDevices.getUserMedia(constraints);
+                    const video = document.getElementById('scanner-video');
+                    video.srcObject = this.scannerStream;
+                    video.onloadedmetadata = () => {
+                        video.play();
+                        this.scannerActive = true;
+                        this.scannerReady = true;
+                        this.scanFrame();
+                    };
+                } catch (err) {
+                    console.error("Camera access denied", err);
+                    alert("Camera access denied. Please check permissions.");
+                }
+            },
+
+            stopScanner() {
+                this.scannerActive = false;
+                this.scannerReady = false;
+                if (this.scannerStream) {
+                    this.scannerStream.getTracks().forEach(t => t.stop());
+                    this.scannerStream = null;
+                }
+            },
+
+            async scanFrame() {
+                if (!this.scannerActive) return;
+
+                const video = document.getElementById('scanner-video');
+                if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    
+                    const imgData = context.getImageData(0, 0, canvas.width, canvas.height);
+                    const code = jsQR(imgData.data, imgData.width, imgData.height);
+
+                    if (code && code.data !== this.lastScannedData) {
+                        this.lastScannedData = code.data;
+                        this.processScan(code.data);
+                        // Reset lastScannedData after a short delay to allow re-scanning same item if needed
+                        setTimeout(() => { this.lastScannedData = null; }, 2000);
+                    }
+                }
+                
+                requestAnimationFrame(() => this.scanFrame());
+            },
+
+            processScan(data) {
+                console.log("Scanned:", data);
+                let matchId = null;
+                
+                // Handle INSTANCE-ID format
+                if (data.startsWith('INSTANCE-')) {
+                    const instanceId = data.split('-')[1];
+                    const row = document.querySelector(`tr[data-instance-id="${instanceId}"]`);
+                    if (row) {
+                        matchId = row.id.split('-').pop();
+                    }
+                }
+                
+                if (matchId) {
+                    this.highlightAndMark(matchId);
+                } else {
+                    // Try to search by raw data if not a standard INSTANCE-ID
+                    this.searchQuery = data;
+                    this.handleSearch();
+                }
+            },
+
+            handleSearch() {
+                const q = this.searchQuery.toLowerCase().trim();
+                if (q.length < 2) return;
+
+                const rows = document.querySelectorAll('tbody tr[data-name]');
+                let matchId = null;
+
+                for (let row of rows) {
+                    const code = row.getAttribute('data-instance-code');
+                    const serial = row.getAttribute('data-serial');
+                    const model = row.getAttribute('data-model');
+                    const brand = row.getAttribute('data-brand');
+                    const name = row.getAttribute('data-name');
+
+                    if (code.includes(q) || serial.includes(q) || model.includes(q) || brand.includes(q) || name.includes(q)) {
+                        matchId = row.id.split('-').pop();
+                        break;
+                    }
+                }
+
+                if (matchId) {
+                    this.highlightAndMark(matchId);
+                }
+            },
+
+            highlightAndMark(id) {
+                this.highlightedId = id;
+                const row = document.getElementById(`item-row-${id}`);
+                if (row) {
+                    // Automatically set status to returned
+                    const select = row.querySelector('select');
+                    if (select) {
+                        // Alpine.js model update trigger
+                        const alpineData = Alpine.$data(row);
+                        if (alpineData) {
+                            alpineData.itemStatus = 'returned';
+                        } else {
+                            select.value = 'returned';
+                        }
+                    }
+
+                    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    row.classList.add('row-highlight');
+                    setTimeout(() => {
+                        row.classList.remove('row-highlight');
+                    }, 2000);
+                }
+            },
+
+            isHighlighted(id) {
+                return this.highlightedId === id;
+            }
+        };
+    }
+</script>
+{% endblock %}

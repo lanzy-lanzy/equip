@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Instance - {{ instance.instance_code }}{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav class="flex mb-6" aria-label="Breadcrumb">
+    <ol class="inline-flex items-center space-x-1 md:space-x-3">
+        <li class="inline-flex items-center">
+            <a href="{% url 'dashboard' %}" class="text-gray-700 hover:text-indigo-600">
+                <i class="fas fa-home mr-2"></i>Dashboard
+            </a>
+        </li>
+        <li><i class="fas fa-chevron-right text-gray-400 mx-2"></i>
+            <a href="{% url 'supply_detail' supply.pk %}" class="text-gray-700 hover:text-indigo-600">{{ supply.name
+                }}</a>
+        </li>
+        <li><i class="fas fa-chevron-right text-gray-400 mx-2"></i>
+            <a href="{% url 'equipment_instance_detail' instance.pk %}" class="text-gray-700 hover:text-indigo-600">{{
+                instance.instance_code }}</a>
+        </li>
+        <li><i class="fas fa-chevron-right text-gray-400 mx-2"></i>
+            <span class="text-gray-500">Edit</span>
+        </li>
+    </ol>
+</nav>
+
+<!-- Form Card -->
+<div class="max-w-2xl mx-auto">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center mb-6">
+            <div class="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center mr-4">
+                <i class="fas fa-edit text-yellow-600 text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold text-gray-800">Edit Equipment Instance</h1>
+                <p class="text-gray-600">{{ instance.instance_code }}</p>
+            </div>
+        </div>
+
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Instance Code</label>
+                <input type="text" value="{{ instance.instance_code }}" disabled
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500">
+                <p class="text-xs text-gray-500 mt-1">Instance code cannot be changed</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="brand" class="block text-sm font-medium text-gray-700 mb-1">Brand</label>
+                    <input type="text" name="brand" id="brand" value="{{ instance.brand|default:'' }}"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label for="model_name" class="block text-sm font-medium text-gray-700 mb-1">Model</label>
+                    <input type="text" name="model_name" id="model_name" value="{{ instance.model_name|default:'' }}"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+            </div>
+
+            <div>
+                <label for="serial_number" class="block text-sm font-medium text-gray-700 mb-1">Serial Number</label>
+                <input type="text" name="serial_number" id="serial_number"
+                    value="{{ instance.serial_number|default:'' }}"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+
+            <div>
+                <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select name="status" id="status"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if instance.status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                <textarea name="notes" id="notes" rows="3"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">{{ instance.notes|default:'' }}</textarea>
+            </div>
+
+            <div class="flex justify-end space-x-3 pt-4 border-t">
+                <a href="{% url 'equipment_instance_detail' instance.pk %}"
+                    class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
+                    Cancel
+                </a>
+                <button type="submit"
+                    class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors">
+                    <i class="fas fa-save mr-2"></i>Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

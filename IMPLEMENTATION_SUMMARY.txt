@@ -1,0 +1,178 @@
+================================================================================
+CONSUMABLE vs NON-CONSUMABLE ITEMS SEPARATION - IMPLEMENTATION SUMMARY
+================================================================================
+
+OBJECTIVE:
+Separate consumable and non-consumable items in the "Request to Borrow Item"
+form to help users quickly identify and select the type of item they need.
+
+================================================================================
+FILES MODIFIED:
+================================================================================
+
+1. inventory/models.py
+   - Added 'is_consumable' Boolean field to Supply model
+   - Field defaults to False (non-consumable)
+   - Includes help text for admin users
+
+2. inventory/forms.py
+   - Updated SupplyForm to include 'is_consumable' checkbox
+   - Modified BorrowRequestForm to group supplies by type
+   - Creates grouped choices with headers:
+     * Non-Consumable Items
+     * Consumable Items
+
+3. inventory/views.py
+   - Updated request_borrow_item view
+   - Separates supplies into two lists
+   - Passes both lists as JSON to template
+
+4. templates/inventory/request_borrow_item.html
+   - Complete redesign of item selection interface
+   - Added two separate sections with icons
+   - Changed from dropdown to radio button selection
+   - Added selected item info display
+   - Enhanced JavaScript for real-time updates
+
+================================================================================
+FILES CREATED:
+================================================================================
+
+1. inventory/migrations/0008_supply_is_consumable.py
+   - Database migration for new field
+   - Run with: python manage.py migrate
+
+2. setup_consumable_types.py
+   - Helper script to auto-classify items
+   - Run with: python manage.py shell < setup_consumable_types.py
+
+3. CONSUMABLE_NONCONSUMABLE_SEPARATION.md
+   - Complete documentation
+   - Setup instructions
+   - Feature details
+   - Testing guidelines
+
+================================================================================
+USER INTERFACE CHANGES:
+================================================================================
+
+NEW LAYOUT:
+
+Select Item to Borrow
+
+[📦 Non-Consumable Items (Equipment)]
+  [☐] USB Flash Drive 32GB (24 pieces available)
+  [☐] Wireless Mouse (15 pieces available)
+  [☐] Keyboard (5 pieces available)
+
+[💧 Consumable Items (Supplies)]
+  [☐] A4 Printer Paper (0 reams available)
+  [☐] Ballpen Black (63 pieces available)
+  [☐] Disinfectant Spray (4 bottles available)
+
+[Selected Item Panel]
+Selected Item:
+USB Flash Drive 32GB
+(Equipment - Non-Consumable)
+Available: 24 pieces
+
+================================================================================
+KEY FEATURES:
+================================================================================
+
+✓ Visual separation with icons (box for equipment, droplet for supplies)
+✓ Color coding (blue for equipment, green for supplies)
+✓ Real-time available quantity display
+✓ Radio button interface (more intuitive than dropdown)
+✓ Selected item info panel
+✓ Responsive design (mobile and desktop)
+✓ Automatic quantity validation
+✓ Empty state handling
+
+================================================================================
+IMPLEMENTATION STEPS:
+================================================================================
+
+1. APPLY MIGRATION
+   python manage.py migrate
+
+2. OPTIONAL: AUTO-CLASSIFY ITEMS
+   python manage.py shell < setup_consumable_types.py
+
+3. MANUAL CLASSIFICATION (if preferred)
+   - Go to Admin panel
+   - Edit each supply
+   - Check/uncheck "Is Consumable" field
+   - Save
+
+4. TEST
+   - Navigate to "Request to Borrow Item"
+   - Verify items are separated
+   - Test selection functionality
+   - Verify quantity display
+
+================================================================================
+CONSUMABLE ITEMS (Examples):
+================================================================================
+- Paper, pens, pencils
+- Printer ink/toner
+- Staples, clips
+- Sticky notes
+- Cleaning supplies
+- Disinfectants
+- Any disposable items
+
+================================================================================
+NON-CONSUMABLE ITEMS (Examples):
+================================================================================
+- Equipment (printers, scanners)
+- Computers, keyboards, mice
+- USB drives
+- Cables and adapters
+- Furniture
+- Tools and instruments
+- Reusable equipment
+
+================================================================================
+TECHNICAL DETAILS:
+================================================================================
+
+Database:
+- New field: Supply.is_consumable (Boolean, default=False)
+- Migration: 0008_supply_is_consumable.py
+
+Frontend:
+- Uses JSON data from view (no select dropdown)
+- Radio button selection
+- Real-time updates via JavaScript
+- Responsive Tailwind CSS styling
+
+Backend:
+- View filters supplies by is_consumable flag
+- Returns separated lists to template
+- Form validates selection
+
+================================================================================
+TESTING CHECKLIST:
+================================================================================
+
+□ Migration runs successfully
+□ Supplies can be marked as consumable in Admin
+□ Request to Borrow page loads without errors
+□ Items are separated into two groups
+□ Non-consumable items show first
+□ Consumable items show second
+□ Each section has correct icon and label
+□ Quantity is displayed correctly
+□ Selection triggers info panel update
+□ Item type displays correctly (Equipment vs Consumable)
+□ Available quantity displays correctly
+□ Quantity input validates against available stock
+□ Form submission works correctly
+□ Empty sections show appropriate message
+□ Mobile layout works correctly
+□ Page is accessible (keyboard navigation)
+
+================================================================================
+END OF SUMMARY
+================================================================================

@@ -1,0 +1,389 @@
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    {% if borrowed_items %}
+    <!-- Bulk Action Toolbar -->
+    <div id="bulk-action-toolbar"
+        class="hidden bg-blue-50 border-b border-blue-200 px-6 py-3 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <span id="selected-count" class="text-sm font-medium text-blue-900">0 items selected</span>
+        </div>
+        <div class="flex items-center space-x-3">
+            <button onclick="selectAllItems()" class="text-sm font-medium text-blue-600 hover:text-blue-900">
+                Select All
+            </button>
+            <button onclick="deselectAllItems()" class="text-sm font-medium text-blue-600 hover:text-blue-900">
+                Deselect All
+            </button>
+            <div class="w-px h-5 bg-blue-200"></div>
+            {% if user.role in 'admin,gso_staff' %}
+            <button onclick="deleteSelectedItems()"
+                class="inline-flex items-center px-3 py-1.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors">
+                <i class="fas fa-trash mr-2"></i> Delete Selected
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    {% if user.role in 'admin,gso_staff' %}
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
+                        <input type="checkbox" id="select-all-checkbox" onchange="toggleSelectAll(this)"
+                            class="rounded border-gray-300">
+                    </th>
+                    {% endif %}
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Item
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Borrower
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Borrow Date
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Return Deadline
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Returned
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Duration
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Quantity
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        QR Code
+                    </th>
+                    {% if user.role in 'admin,gso_staff' %}
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                    </th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for item in borrowed_items %}
+                <tr class="hover:bg-gray-50 transition-colors item-row" data-item-id="{{ item.pk }}">
+                    {% if user.role in 'admin,gso_staff' %}
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <input type="checkbox" class="item-checkbox rounded border-gray-300" value="{{ item.pk }}"
+                            onchange="updateSelectedCount()">
+                    </td>
+                    {% endif %}
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0 h-10 w-10">
+                                <div class="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center">
+                                    <i class="fas fa-box text-gray-400"></i>
+                                </div>
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-sm font-medium text-gray-900">
+                                    <a href="{% url 'supply_detail' item.supply.pk %}" class="hover:text-indigo-600">
+                                        {{ item.supply.name }}
+                                    </a>
+                                </div>
+                                <div class="text-sm text-gray-500">
+                                    {{ item.supply.category.name }}
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">
+                            {{ item.borrower.get_full_name|default:item.borrower.username }}
+                        </div>
+                        <div class="text-sm text-gray-500">
+                            {{ item.borrower.username }}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {% if item.borrowed_date %}
+                        {{ item.borrowed_date|date:"M d, Y" }}
+                        {% else %}
+                        {{ item.borrowed_at|date:"M d, Y" }}
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        {% if item.return_deadline %}
+                        <span class="font-medium text-gray-900">{{ item.return_deadline|date:"M d, Y" }}</span>
+                        <div class="text-xs mt-1">
+                            {% if item.due_status == 'overdue' %}
+                            <span class="text-red-600 font-semibold">OVERDUE</span>
+                            {% elif item.due_status == 'due_today' %}
+                            <span class="text-yellow-600 font-semibold">DUE TODAY</span>
+                            {% elif item.due_status == 'due_soon' %}
+                            <span class="text-amber-600">Due soon</span>
+                            {% elif item.due_status == 'returned' %}
+                            <span class="text-green-600">Returned</span>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <span class="text-gray-500">No deadline</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {% if item.returned_at %}
+                        {{ item.returned_at|date:"M d, Y" }}<br>
+                        <span class="text-xs text-gray-500">{{ item.returned_at|time:"H:i" }}</span>
+                        {% else %}
+                        <span class="text-gray-500">Not returned</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {# Always show the duration (ongoing borrows display elapsed time) #}
+                        {{ item.duration_display }}
+                        {% if not item.is_returned %}
+                        <div class="text-xs text-gray-400">(so far)</div>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {{ item.borrowed_quantity }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if item.is_returned %}
+                        <span
+                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            <i class="fas fa-check-circle mr-1"></i> Returned
+                        </span>
+                        {% elif item.is_overdue %}
+                        <span
+                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            <i class="fas fa-exclamation-circle mr-1"></i> Overdue
+                        </span>
+                        {% elif item.due_status == 'due_today' %}
+                        <span
+                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                            <i class="fas fa-clock mr-1"></i> Due Today
+                        </span>
+                        {% elif item.due_status == 'due_soon' %}
+                        <span
+                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                            <i class="fas fa-calendar mr-1"></i> Due Soon
+                        </span>
+                        {% else %}
+                        <span
+                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            <i class="fas fa-hand-holding-box mr-1"></i> Borrowed
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        {% if item.borrowing_request and item.borrowing_request.borrowing_qr_code %}
+                        <button
+                            onclick="showQRCodeModal('{{ item.borrowing_request.borrowing_qr_code.url }}', '{{ item.supply.name }}')"
+                            class="text-indigo-600 hover:text-indigo-900 mr-2" title="Show QR Code">
+                            <i class="fas fa-qrcode"></i>
+                        </button>
+                        <a href="{{ item.borrowing_request.borrowing_qr_code.url }}"
+                            download="qr-code-{{ item.supply.name|slugify }}.png"
+                            class="text-green-600 hover:text-green-900" title="Download QR Code">
+                            <i class="fas fa-download"></i>
+                        </a>
+                        {% else %}
+                        <span class="text-gray-400">No QR</span>
+                        {% endif %}
+                    </td>
+                    {% if user.role in 'admin,gso_staff' %}
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div class="flex items-center space-x-2">
+                            <a href="{% url 'manage_borrowed_item' item.pk %}"
+                                class="text-indigo-600 hover:text-indigo-900" title="Manage this item">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            {% if item.batch_group_id and not item.is_returned and item.batch_group_id in batch_groups %}
+                            <a href="{% url 'batch_return_items' item.batch_group_id %}"
+                                class="text-green-600 hover:text-green-900"
+                                title="Batch Return ({{ batch_groups|length }} items in batch)">
+                                <i class="fas fa-layer-group"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Results Summary -->
+    <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
+        <p class="text-sm text-gray-600">
+            Showing {{ borrowed_items|length }} of {{ borrowed_items.count }} borrowed items
+            {% if search or status_filter %}
+            <span class="ml-2">(filtered results)</span>
+            {% endif %}
+        </p>
+    </div>
+    {% else %}
+    <div class="p-8 text-center">
+        <i class="fas fa-inbox text-4xl text-gray-300 mb-4"></i>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">No borrowed items found</h3>
+        <p class="text-gray-500 mb-4">
+            {% if status_filter == 'borrowed' %}
+            No items are currently borrowed.
+            {% elif status_filter == 'returned' %}
+            No items have been returned yet.
+            {% else %}
+            No borrowed items have been recorded yet.
+            {% endif %}
+        </p>
+        {% if not status_filter %}
+        <div class="mt-4 p-4 bg-blue-50 rounded-lg max-w-2xl mx-auto">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-info-circle text-blue-400"></i>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-blue-700">
+                        <strong>Note:</strong> Borrowed items are recorded when department users actually collect items
+                        using the QR scanner after their borrowing requests have been approved.
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- QR Code Modal -->
+<div id="qr-code-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-800">Borrowing QR Code</h3>
+            <button onclick="closeQRCodeModal()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="text-center">
+            <img id="qr-code-image" src="" alt="QR Code" class="mx-auto max-w-full h-auto">
+            <p id="qr-code-item-name" class="text-sm text-gray-600 mt-2"></p>
+            <p class="text-xs text-gray-500 mt-1">Show this QR code to GSO staff when returning the item</p>
+        </div>
+
+        <div class="mt-4 flex justify-center">
+            <a id="download-qr-code" href="#" download
+                class="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
+                <i class="fas fa-download mr-2"></i>
+                Download QR Code
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showQRCodeModal(qrCodeUrl, itemName) {
+        document.getElementById('qr-code-image').src = qrCodeUrl;
+        document.getElementById('qr-code-item-name').textContent = itemName;
+        document.getElementById('download-qr-code').href = qrCodeUrl;
+        document.getElementById('download-qr-code').download = 'qr-code-' + itemName.toLowerCase().replace(/\s+/g, '-') + '.png';
+        document.getElementById('qr-code-modal').classList.remove('hidden');
+    }
+
+    function closeQRCodeModal() {
+        document.getElementById('qr-code-modal').classList.add('hidden');
+    }
+
+    // Close modal when clicking outside
+    document.getElementById('qr-code-modal').addEventListener('click', function (e) {
+        if (e.target === this) {
+            closeQRCodeModal();
+        }
+    });
+
+    // Prevent closing when clicking inside the modal content
+    document.querySelector('#qr-code-modal .bg-white').addEventListener('click', function (e) {
+        e.stopPropagation();
+    });
+
+    // Bulk delete functionality
+    function updateSelectedCount() {
+        const checkboxes = document.querySelectorAll('.item-checkbox:checked');
+        const toolbar = document.getElementById('bulk-action-toolbar');
+        const selectedCount = document.getElementById('selected-count');
+
+        if (checkboxes.length > 0) {
+            toolbar.classList.remove('hidden');
+            selectedCount.textContent = checkboxes.length + ' item' + (checkboxes.length !== 1 ? 's' : '') + ' selected';
+        } else {
+            toolbar.classList.add('hidden');
+        }
+    }
+
+    function toggleSelectAll(checkbox) {
+        const itemCheckboxes = document.querySelectorAll('.item-checkbox');
+        itemCheckboxes.forEach(cb => {
+            cb.checked = checkbox.checked;
+        });
+        updateSelectedCount();
+    }
+
+    function selectAllItems() {
+        const itemCheckboxes = document.querySelectorAll('.item-checkbox');
+        const selectAllCheckbox = document.getElementById('select-all-checkbox');
+        itemCheckboxes.forEach(cb => {
+            cb.checked = true;
+        });
+        selectAllCheckbox.checked = true;
+        updateSelectedCount();
+    }
+
+    function deselectAllItems() {
+        const itemCheckboxes = document.querySelectorAll('.item-checkbox');
+        const selectAllCheckbox = document.getElementById('select-all-checkbox');
+        itemCheckboxes.forEach(cb => {
+            cb.checked = false;
+        });
+        selectAllCheckbox.checked = false;
+        updateSelectedCount();
+    }
+
+    function deleteSelectedItems() {
+        const checkboxes = document.querySelectorAll('.item-checkbox:checked');
+        if (checkboxes.length === 0) {
+            alert('Please select items to delete');
+            return;
+        }
+
+        if (!confirm('Are you sure you want to delete ' + checkboxes.length + ' item(s)? This action cannot be undone.')) {
+            return;
+        }
+
+        const formData = new FormData();
+        checkboxes.forEach(cb => {
+            formData.append('item_ids', cb.value);
+        });
+
+        // Get CSRF token from meta tag
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+        fetch('{% url "bulk_delete_borrowed_items" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': csrfToken
+            }
+        })
+            .then(response => {
+                if (response.ok) {
+                    // Reload the page to refresh the list
+                    location.reload();
+                } else {
+                    alert('Error deleting items. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error deleting items. Please try again.');
+            });
+    }
+</script>

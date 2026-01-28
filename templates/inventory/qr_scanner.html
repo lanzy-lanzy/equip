@@ -1,0 +1,776 @@
+{% extends 'base.html' %}
+
+{% block title %}QR Scanner - Smart Supply Management System{% endblock %}
+
+{% block content %}
+<style>
+    .scanner-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+    }
+
+    .scan-region-highlight {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 220px;
+        height: 220px;
+        margin-left: -110px;
+        margin-top: -110px;
+        border: 3px solid #6366f1;
+        box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.4);
+        border-radius: 16px;
+    }
+
+    .modal-backdrop {
+        background-color: rgba(15, 23, 42, 0.8 \);
+                backdrop-filter: blur(4px \);
+            }
+
+            .smart-modal-content {
+                animation: modalScale 0.2s ease-out;
+            }
+
+            @keyframes modalScale {
+                from {
+                    opacity: 0; transform: scale(0.95 \);
+                    }
+
+                    to {
+                        opacity: 1; transform: scale(1 \);
+                        }
+                    }
+</style>
+
+<!-- Page Header -->
+<div class="mb-6">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-slate-800 mb-1">Operational Scanner</h1>
+            <p class="text-slate-500 font-medium">Instant Release & Return System</p>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Camera Scanner -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold text-slate-800">Camera Scanner</h2>
+            <div id="camera-badge"
+                class="hidden px-2.5 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold uppercase tracking-wider">
+                Active
+            </div>
+        </div>
+
+        <div class="relative">
+            <!-- Video Container -->
+            <div
+                class="relative bg-slate-900 rounded-xl overflow-hidden aspect-video flex items-center justify-center border-4 border-slate-100 shadow-inner">
+                <!-- Video Placeholder -->
+                <div id="video-placeholder"
+                    class="absolute inset-0 flex flex-col items-center justify-center text-slate-400">
+                    <div class="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-camera text-2xl"></i>
+                    </div>
+                    <p class="font-medium">Camera offline</p>
+                    <button id="start-camera"
+                        class="mt-4 px-6 py-2.5 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition-all shadow-lg hover:shadow-indigo-200">
+                        Start Scanner
+                    </button>
+                </div>
+
+                <!-- Video Element -->
+                <video id="video" class="hidden w-full h-full object-cover" playsinline></video>
+
+                <!-- Scanner Overlay -->
+                <div id="scanner-overlay" class="scanner-overlay hidden">
+                    <div class="scan-region-highlight"></div>
+                </div>
+            </div>
+
+            <button id="stop-camera"
+                class="hidden mt-4 inline-flex items-center px-4 py-2 bg-slate-100 text-slate-600 text-sm font-semibold rounded-lg hover:bg-slate-200 transition-colors">
+                <i class="fas fa-power-off mr-2"></i> Stop Camera
+            </button>
+            <div id="camera-status" class="mt-3 text-sm font-medium text-slate-500 text-center"></div>
+        </div>
+    </div>
+
+    <!-- Right Side: Recent Activity & Manual Entry -->
+    <div class="space-y-6">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <h2 class="text-lg font-semibold text-slate-800 mb-4">Manual Entry</h2>
+            <form id="manual-scan-form" class="flex gap-2">
+                <input type="text" id="qr-data-input" placeholder="Enter Request ID or QR data"
+                    class="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all outline-none">
+                <button type="submit"
+                    class="px-6 py-2.5 bg-slate-800 text-white font-semibold rounded-xl hover:bg-slate-900 transition-all">
+                    Find
+                </button>
+            </form>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex-1">
+            <h2 class="text-lg font-semibold text-slate-800 mb-4">Recent Transmissions</h2>
+            <div id="recent-scans" class="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                <!-- Recent scans -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Unified Smart Modal -->
+<div id="smart-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden smart-modal-content">
+        <div id="modal-header"
+            class="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+            <h3 id="modal-title" class="text-xl font-bold text-slate-800">Processing...</h3>
+            <button onclick="closeSmartModal()"
+                class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-200 text-slate-400 transition-colors">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div id="modal-body" class="p-6">
+            <!-- Dynamic Content -->
+        </div>
+
+        <div id="modal-footer" class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex gap-3">
+            <!-- Dynamic Buttons -->
+        </div>
+    </div>
+</div>
+
+<!-- Return Status Modal - Enhanced -->
+<div id="return-status-modal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden smart-modal-content">
+        <div class="px-6 py-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white">
+            <h3 class="text-xl font-bold">Return Item</h3>
+            <p class="text-sm text-indigo-100 mt-1">Confirm return condition</p>
+        </div>
+
+        <!-- Item Details Section -->
+        <div id="return-item-details" class="px-6 py-4 bg-slate-50 border-b border-slate-100">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 bg-white rounded-xl shadow-sm flex items-center justify-center">
+                    <i class="fas fa-box text-2xl text-indigo-500"></i>
+                </div>
+                <div class="flex-1">
+                    <p id="return-item-name" class="font-bold text-slate-800 text-lg">Item Name</p>
+                    <p id="return-item-code" class="text-xs text-slate-500 font-medium">#INSTANCE-XX</p>
+                </div>
+            </div>
+            <!-- Batch Progress Indicator -->
+            <div id="return-batch-progress" class="mt-3 hidden">
+                <div class="flex items-center justify-between text-xs font-medium mb-1">
+                    <span class="text-indigo-600">Batch Return Progress</span>
+                    <span id="return-progress-text" class="text-slate-600">1 of 3</span>
+                </div>
+                <div class="w-full bg-slate-200 rounded-full h-2">
+                    <div id="return-progress-bar" class="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full transition-all" style="width: 33%"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-6 space-y-3">
+            <p class="text-sm text-slate-600 font-medium mb-4">Select the condition of the returned item:</p>
+            
+            <button onclick="selectReturnCondition('returned')" id="btn-returned"
+                class="w-full flex items-center gap-3 p-4 border-2 border-green-200 bg-green-50 rounded-xl hover:bg-green-100 hover:border-green-400 transition-all group">
+                <div class="w-12 h-12 bg-green-100 group-hover:bg-green-200 rounded-lg flex items-center justify-center transition-all">
+                    <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                </div>
+                <div class="text-left flex-1">
+                    <p class="font-semibold text-slate-800">Good Condition</p>
+                    <p class="text-xs text-slate-500">Item returned in working order • Returns to stock</p>
+                </div>
+                <i class="fas fa-chevron-right text-green-400 opacity-0 group-hover:opacity-100 transition-opacity"></i>
+            </button>
+
+            <button onclick="selectReturnCondition('damaged')" id="btn-damaged"
+                class="w-full flex items-center gap-3 p-4 border-2 border-orange-200 bg-orange-50 rounded-xl hover:bg-orange-100 hover:border-orange-400 transition-all group">
+                <div class="w-12 h-12 bg-orange-100 group-hover:bg-orange-200 rounded-lg flex items-center justify-center transition-all">
+                    <i class="fas fa-exclamation-triangle text-orange-600 text-xl"></i>
+                </div>
+                <div class="text-left flex-1">
+                    <p class="font-semibold text-slate-800">Damaged</p>
+                    <p class="text-xs text-slate-500">Item needs repair • Sent to maintenance</p>
+                </div>
+                <i class="fas fa-chevron-right text-orange-400 opacity-0 group-hover:opacity-100 transition-opacity"></i>
+            </button>
+
+            <button onclick="selectReturnCondition('lost')" id="btn-lost"
+                class="w-full flex items-center gap-3 p-4 border-2 border-red-200 bg-red-50 rounded-xl hover:bg-red-100 hover:border-red-400 transition-all group">
+                <div class="w-12 h-12 bg-red-100 group-hover:bg-red-200 rounded-lg flex items-center justify-center transition-all">
+                    <i class="fas fa-times-circle text-red-600 text-xl"></i>
+                </div>
+                <div class="text-left flex-1">
+                    <p class="font-semibold text-slate-800">Lost</p>
+                    <p class="text-xs text-slate-500">Item cannot be recovered • Retired from inventory</p>
+                </div>
+                <i class="fas fa-chevron-right text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"></i>
+            </button>
+
+            <!-- Notes Input (shown for damaged/lost) -->
+            <div id="return-notes-section" class="hidden mt-4 pt-4 border-t border-slate-200">
+                <label class="block text-sm font-semibold text-slate-700 mb-2">
+                    <i class="fas fa-sticky-note mr-1 text-orange-500"></i>
+                    Notes <span class="text-red-500">*</span> <span class="font-normal text-slate-400">(Required for damaged/lost)</span>
+                </label>
+                <textarea id="return-notes-input" rows="3" 
+                    class="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all resize-none"
+                    placeholder="Describe the damage or circumstances of loss..."></textarea>
+            </div>
+        </div>
+
+        <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex gap-3">
+            <button onclick="closeReturnStatusModal()"
+                class="flex-1 py-3 text-slate-600 font-semibold rounded-xl hover:bg-slate-200 transition-all border border-slate-200">
+                <i class="fas fa-arrow-left mr-2"></i>Cancel
+            </button>
+            <button id="confirm-return-btn" onclick="confirmReturnWithNotes()" disabled
+                class="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-200">
+                <i class="fas fa-check mr-2"></i>Confirm Return
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<script>
+    let stream = null;
+    let scanning = false;
+    let qrCanvas = null;
+    let qrContext = null;
+    let lastResult = null;
+    let currentQRData = null;
+    let selectedReturnStatus = 'returned';
+
+    // Camera Handling
+    async function startCamera() {
+        try {
+            const constraints = { video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } };
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
+            const video = document.getElementById('video');
+            video.srcObject = stream;
+            video.onloadedmetadata = () => {
+                video.play();
+                video.classList.remove('hidden');
+                document.getElementById('video-placeholder').classList.add('hidden');
+                document.getElementById('scanner-overlay').classList.remove('hidden');
+                document.getElementById('start-camera').classList.add('hidden');
+                document.getElementById('stop-camera').classList.remove('hidden');
+                document.getElementById('camera-badge').classList.remove('hidden');
+                scanning = true;
+                scanQRCode();
+            };
+        } catch (err) {
+            showNotification('Camera access denied', 'error');
+        }
+    }
+
+    function stopCamera() {
+        scanning = false;
+        if (stream) {
+            stream.getTracks().forEach(t => t.stop());
+            stream = null;
+        }
+        const video = document.getElementById('video');
+        video.classList.add('hidden');
+        document.getElementById('video-placeholder').classList.remove('hidden');
+        document.getElementById('scanner-overlay').classList.add('hidden');
+        document.getElementById('start-camera').classList.remove('hidden');
+        document.getElementById('stop-camera').classList.add('hidden');
+        document.getElementById('camera-badge').classList.add('hidden');
+    }
+
+    function scanQRCode() {
+        if (!scanning) return;
+        const video = document.getElementById('video');
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            if (!qrCanvas) {
+                qrCanvas = document.createElement('canvas');
+                qrContext = qrCanvas.getContext('2d');
+            }
+            qrCanvas.width = video.videoWidth;
+            qrCanvas.height = video.videoHeight;
+            qrContext.drawImage(video, 0, 0, qrCanvas.width, qrCanvas.height);
+            const imgData = qrContext.getImageData(0, 0, qrCanvas.width, qrCanvas.height);
+            const code = jsQR(imgData.data, imgData.width, imgData.height);
+
+            if (code && code.data !== currentQRData) {
+                processScan(code.data);
+                currentQRData = code.data;
+            }
+        }
+        setTimeout(scanQRCode, 100);
+    }
+
+    async function processScan(data) {
+        // Briefly pause scanning to avoid repeated hits
+        const wasScanning = scanning;
+        scanning = false;
+
+        try {
+            const response = await fetch('{% url "process_qr_scan" %}', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' },
+                body: JSON.stringify({ qr_data: data, action: 'scan', notes: '' })
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                lastResult = result;
+                renderSmartModal(result);
+            } else {
+                showNotification(result.error, 'error');
+                scanning = wasScanning;
+            }
+        } catch (err) {
+            showNotification('Communication error', 'error');
+            scanning = wasScanning;
+        }
+    }
+
+    function renderSmartModal(result) {
+        const body = document.getElementById('modal-body');
+        const footer = document.getElementById('modal-footer');
+        const title = document.getElementById('modal-title');
+
+        body.innerHTML = '';
+        footer.innerHTML = '';
+
+        if (result.is_batch) {
+            title.innerText = 'Batch Request Summary';
+            body.innerHTML = `
+            <div class="bg-indigo-50 rounded-2xl p-4 mb-4">
+                <p class="text-indigo-800 font-semibold mb-1">Batch from ${result.user}</p>
+                <p class="text-sm text-indigo-600">${result.batch_items.length} items detected</p>
+            </div>
+            <div class="space-y-3 mb-4 max-h-[30vh] overflow-y-auto">
+                ${result.batch_items.map(item => `
+                    <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+                        <div>
+                            <p class="font-semibold text-slate-800">${item.supply_name}</p>
+                            <p class="text-xs text-slate-500">Qty: ${item.quantity_requested}</p>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${item.status === 'approved' ? 'bg-green-100 text-green-700' :
+                    item.status === 'released' ? 'bg-blue-100 text-blue-700' :
+                        item.status === 'overdue' ? 'bg-red-100 text-red-700' : 'bg-slate-200 text-slate-600'
+                }">${item.status}</span>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+
+            const hasApproved = result.batch_items.some(i => i.status === 'approved');
+            const hasReleased = result.batch_items.some(i => ['released', 'overdue'].includes(i.status.toLowerCase()));
+
+            if (hasApproved && hasReleased) {
+                footer.innerHTML = `
+                <button onclick="executeAction('batch_release')" class="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200">
+                    Bulk Release Approved Items
+                </button>
+                <button onclick="executeAction('batch_return')" class="flex-1 py-3 bg-yellow-500 text-white font-bold rounded-2xl hover:bg-yellow-600 transition-all shadow-lg shadow-yellow-100">
+                    Bulk Return Released Items
+                </button>
+            `;
+            } else if (hasApproved) {
+                footer.innerHTML = `
+                <button onclick="executeAction('batch_release')" class="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200">
+                    Bulk Release Approved Items
+                </button>
+            `;
+            } else if (hasReleased || result.has_active_borrowed) {
+                // If items are released (or partially returned), show option to scan individual items
+                footer.innerHTML = `
+                <button onclick="executeAction('scan_return_items')" class="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200">
+                    <i class="fas fa-qrcode mr-2"></i> Scan Items to Return
+                </button>
+                <button onclick="executeAction('batch_return')" class="flex-1 py-3 bg-yellow-500 text-white font-bold rounded-2xl hover:bg-yellow-600 transition-all shadow-lg shadow-yellow-100">
+                    Bulk Return All
+                </button>
+            `;
+            }
+        } else if (result.borrowing_request || result.supply || result.is_borrow_qr) {
+            const item = result.borrowing_request || result.supply;
+            const isReturnMode = result.is_borrow_qr && result.borrowed_item_id;
+            
+            const itemName = result.supply ? result.supply.name : 
+                            (result.borrowing_request ? result.borrowing_request.supply_name : 
+                            (result.supply_name || 'Item'));
+            
+            const status = result.borrowing_request ? result.borrowing_request.status : 
+                          (result.is_item_borrowed ? 'released' : 
+                          (isReturnMode ? 'released' : 'available'));
+            
+            const isBorrowed = result.is_item_borrowed === true || 
+                               (result.borrowing_request && ['released', 'overdue'].includes((result.borrowing_request.status || '').toLowerCase())) ||
+                               isReturnMode;
+
+            const supplyType = result.supply ? (result.supply.material_type || result.supply.category || '').toLowerCase() : '';
+            const isMaterialOrEquipment = supplyType === 'material' || supplyType === 'equipment' || isReturnMode;
+            const isConsumable = supplyType === 'consumable' && !isReturnMode;
+            const statusLower = status.toLowerCase();
+
+            let statusBadge = '';
+            let mainAction = '';
+
+            if (isBorrowed) {
+                const isOverdue = result.overdue_warning || (result.borrowing_request && result.borrowing_request.status === 'overdue');
+                if (isOverdue) {
+                    statusBadge = '<span class="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold">OVERDUE</span>';
+                } else {
+                    statusBadge = '<span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold">RELEASED</span>';
+                }
+
+                mainAction = `<button onclick="executeAction('return')" class="flex-1 py-3 bg-yellow-500 text-white font-bold rounded-2xl hover:bg-yellow-600 transition-all shadow-lg shadow-yellow-100">Confirm Return</button>`;
+                
+                if (result.is_batch_item) {
+                    const batchUrl = result.batch_return_url || (result.batch_group_id ? `/borrowed-items/batch-return/${result.batch_group_id}/` : '#');
+                    mainAction += `
+                    <a href="${batchUrl}" class="flex-1 py-3 bg-slate-800 text-white font-bold rounded-2xl hover:bg-black transition-all shadow-lg shadow-slate-100 text-center flex items-center justify-center">
+                        <i class="fas fa-list-check mr-2"></i> View Batch
+                    </a>`;
+                }
+            } else if (statusLower === 'approved') {
+                statusBadge = '<span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold">APPROVED</span>';
+                mainAction = `<button onclick="executeAction('release')" class="flex-1 py-3 bg-green-600 text-white font-bold rounded-2xl hover:bg-green-700 transition-all shadow-lg shadow-green-100">Release Supply</button>`;
+            } else {
+                statusBadge = `<span class="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold uppercase">${status}</span>`;
+                if (isConsumable) {
+                    mainAction = `<button onclick="executeAction('release')" class="flex-1 py-2 bg-slate-800 text-white font-bold rounded-xl hover:bg-black transition-all">Quick Release</button>`;
+                } else {
+                    mainAction = `
+                    <button onclick="executeAction('release')" class="flex-1 py-2 bg-slate-800 text-white font-bold rounded-xl hover:bg-black transition-all">Quick Release</button>
+                    <button onclick="executeAction('return')" class="flex-1 py-2 bg-slate-200 text-slate-800 font-bold rounded-xl hover:bg-slate-300 transition-all">Quick Return</button>
+                `;
+                }
+            }
+
+            // Batch Context Notice
+            let contextNotice = '';
+            if (result.is_batch_item && isBorrowed) {
+                contextNotice = `
+                <div class="mb-4 p-3 bg-indigo-50 border border-indigo-100 rounded-xl">
+                    <div class="flex items-center gap-2 text-indigo-700 font-bold text-xs mb-1">
+                        <i class="fas fa-layer-group"></i>
+                        <span>BATCH ITEM DETECTED</span>
+                    </div>
+                    <p class="text-[10px] text-indigo-600 font-medium">
+                        This item is part of a group borrow. 
+                        ${result.remaining_items > 0 ? `<strong>${result.remaining_items}</strong> other items are still unreturned in this batch.` : 'This is the last item to return in this batch.'}
+                    </p>
+                </div>`;
+            }
+
+            body.innerHTML += `
+            ${contextNotice}
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center text-2xl text-slate-400">
+                    <i class="fas fa-box"></i>
+                </div>
+                <div>
+                    <h4 class="text-lg font-bold text-slate-800">${itemName}</h4>
+                    <div class="mt-1">${statusBadge} ${result.instance_code ? `<span class="ml-2 text-[10px] font-black text-slate-400 uppercase">#${result.instance_code}</span>` : ''}</div>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4 text-sm bg-slate-50 rounded-2xl p-4">
+                <div>
+                    <p class="text-slate-400 font-medium">${(result.borrowing_request || result.is_borrow_qr) ? 'Requested Base' : 'Available Stock'}</p>
+                    <p class="text-slate-900 font-bold text-lg">${result.borrowing_request ? result.borrowing_request.quantity_requested : (result.supply ? result.supply.quantity : '1')}</p>
+                </div>
+                <div>
+                    <p class="text-slate-400 font-medium">${(result.borrowing_request || result.is_borrow_qr) ? 'Requested By' : 'Location'}</p>
+                    <p class="text-slate-900 font-bold text-lg">${result.user || 'N/A'}</p>
+                </div>
+            </div>
+        `;
+
+            footer.innerHTML = mainAction;
+        }
+
+        footer.innerHTML += `<button onclick="closeSmartModal()" class="px-6 py-3 text-slate-500 font-bold rounded-2xl hover:bg-slate-100">Cancel</button>`;
+
+        document.getElementById('smart-modal').classList.remove('hidden');
+    }
+
+    async function executeAction(action) {
+        let url = '';
+        let method = 'POST';
+        let payload = {};
+
+        const qrData = lastResult.is_batch ? currentQRData : (lastResult.borrowing_request ? currentQRData : (lastResult.supply ? lastResult.supply.id : currentQRData));
+        const groupId = currentQRData.split('BATCH-').pop();
+
+        if (action === 'batch_release') {
+            url = `/requests/bulk/${groupId}/release/`;
+        } else if (action === 'batch_return') {
+            url = `/requests/bulk/${groupId}/return/`;
+        } else if (action === 'scan_return_items') {
+            // Close modal and resume scanning
+            closeSmartModal();
+            showNotification('Scan individual item QR codes to return', 'info');
+            return;
+        } else if (action === 'release') {
+            if (lastResult.borrowing_request) {
+                url = `/requests/${lastResult.borrowing_request.id}/release/`;
+            } else {
+                // General issue flow
+                url = '{% url "process_qr_scan" %}';
+                payload = { qr_data: currentQRData, action: 'issue', quantity: 1, location: 'Storage', notes: 'Instant release' };
+            }
+        } else if (action === 'return') {
+            // Show enhanced return status modal with item details
+            document.getElementById('smart-modal').classList.add('hidden');
+            
+            // Get item details from lastResult
+            const itemName = lastResult.instance_name || 
+                           (lastResult.supply ? lastResult.supply.name : 
+                           (lastResult.supply_name || 'Unknown Item'));
+            const itemCode = lastResult.instance_code || lastResult.instance_id || '';
+            
+            // Get batch info if available
+            let batchInfo = null;
+            if (lastResult.is_batch_item && lastResult.remaining_items !== undefined) {
+                batchInfo = {
+                    total: (lastResult.remaining_items || 0) + 1, // +1 for current item
+                    returned: 0
+                };
+            }
+            
+            showReturnModal(itemName, itemCode, batchInfo);
+            return;
+        }
+
+        closeSmartModal();
+        showNotification('Processing transmission...', 'info');
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' },
+                body: Object.keys(payload).length ? JSON.stringify(payload) : null
+            });
+
+            const result = response.ok ? { success: true } : await response.json();
+
+            if (result.success || response.ok) {
+                showNotification('Transaction completed successfully', 'success');
+                // Allow time for the notification to be seen before reloading
+                setTimeout(() => {
+                    location.reload();
+                }, 800);
+            } else {
+                showNotification(result.error || 'Action failed', 'error');
+                scanning = true; // Resume scanning if it failed
+            }
+        } catch (err) {
+            showNotification('Operation failed', 'error');
+        }
+    }
+
+    // Enhanced return flow - track selected condition
+    let pendingReturnCondition = null;
+    let returnItemInfo = {};
+
+    function selectReturnCondition(condition) {
+        pendingReturnCondition = condition;
+        
+        // Remove active states from all buttons
+        ['btn-returned', 'btn-damaged', 'btn-lost'].forEach(id => {
+            document.getElementById(id).classList.remove('ring-2', 'ring-offset-2');
+        });
+        
+        // Add active state to selected button
+        const btnMap = { 'returned': 'btn-returned', 'damaged': 'btn-damaged', 'lost': 'btn-lost' };
+        const selectedBtn = document.getElementById(btnMap[condition]);
+        selectedBtn.classList.add('ring-2', 'ring-offset-2');
+        
+        // Show/hide notes section based on condition
+        const notesSection = document.getElementById('return-notes-section');
+        const notesInput = document.getElementById('return-notes-input');
+        const confirmBtn = document.getElementById('confirm-return-btn');
+        
+        if (condition === 'damaged' || condition === 'lost') {
+            notesSection.classList.remove('hidden');
+            // Enable button only if notes exist, or wait for input
+            confirmBtn.disabled = notesInput.value.trim() === '';
+            notesInput.oninput = () => {
+                confirmBtn.disabled = notesInput.value.trim() === '';
+            };
+        } else {
+            notesSection.classList.add('hidden');
+            confirmBtn.disabled = false;
+        }
+    }
+
+    async function confirmReturnWithNotes() {
+        if (!pendingReturnCondition) {
+            showNotification('Please select a return condition', 'error');
+            return;
+        }
+        
+        const notes = document.getElementById('return-notes-input').value.trim();
+        
+        // Require notes for damaged/lost
+        if ((pendingReturnCondition === 'damaged' || pendingReturnCondition === 'lost') && !notes) {
+            showNotification('Please provide notes for damaged/lost items', 'error');
+            return;
+        }
+
+        selectedReturnStatus = pendingReturnCondition;
+        
+        // Capture QR data BEFORE closing modals (closeSmartModal clears it)
+        const qrDataToSubmit = currentQRData;
+        
+        closeReturnStatusModal();
+        closeSmartModal();
+        
+        showNotification('Processing return...', 'info');
+
+        let url = '{% url "process_qr_scan" %}';
+        let payload = {
+            qr_data: qrDataToSubmit,
+            action: 'return',
+            quantity: 1,
+            location: 'Storage',
+            notes: notes || 'Returned via QR scanner',
+            return_status: pendingReturnCondition
+        };
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const result = response.ok ? { success: true } : await response.json();
+
+            if (result.success || response.ok) {
+                const statusText = pendingReturnCondition === 'returned' ? '✓ Returned successfully!' :
+                    pendingReturnCondition === 'damaged' ? '⚠ Marked as damaged' : '✕ Marked as lost';
+                showNotification(statusText, 'success');
+                setTimeout(() => {
+                    location.reload();
+                }, 1200);
+            } else {
+                showNotification(result.error || 'Return failed', 'error');
+                scanning = true;
+            }
+        } catch (err) {
+            showNotification('Operation failed', 'error');
+        }
+        
+        // Reset state
+        pendingReturnCondition = null;
+    }
+
+    function showReturnModal(itemName, itemCode, batchInfo) {
+        // Populate item details
+        document.getElementById('return-item-name').textContent = itemName || 'Unknown Item';
+        document.getElementById('return-item-code').textContent = itemCode ? `#${itemCode}` : '';
+        
+        // Show batch progress if applicable
+        const progressSection = document.getElementById('return-batch-progress');
+        if (batchInfo && batchInfo.total > 0) {
+            const returned = batchInfo.returned || 0;
+            const total = batchInfo.total;
+            const remaining = total - returned;
+            const percentage = Math.round((returned / total) * 100);
+            
+            document.getElementById('return-progress-text').textContent = `${remaining} of ${total} remaining`;
+            document.getElementById('return-progress-bar').style.width = `${percentage}%`;
+            progressSection.classList.remove('hidden');
+        } else {
+            progressSection.classList.add('hidden');
+        }
+        
+        // Reset modal state
+        pendingReturnCondition = null;
+        document.getElementById('return-notes-input').value = '';
+        document.getElementById('return-notes-section').classList.add('hidden');
+        document.getElementById('confirm-return-btn').disabled = true;
+        ['btn-returned', 'btn-damaged', 'btn-lost'].forEach(id => {
+            document.getElementById(id).classList.remove('ring-2', 'ring-offset-2');
+        });
+        
+        // Show the modal
+        document.getElementById('return-status-modal').classList.remove('hidden');
+    }
+
+    // Keep original confirmReturn for backward compatibility
+    async function confirmReturn(returnStatus) {
+        pendingReturnCondition = returnStatus;
+        await confirmReturnWithNotes();
+    }
+
+    function closeReturnStatusModal() {
+        document.getElementById('return-status-modal').classList.add('hidden');
+    }
+
+    function closeSmartModal(preserveQRData = false) {
+        document.getElementById('smart-modal').classList.add('hidden');
+        document.getElementById('return-status-modal').classList.add('hidden');
+        if (!preserveQRData) {
+            currentQRData = null;
+        }
+        scanning = true;
+    }
+
+    async function loadRecentScans() {
+        const container = document.getElementById('recent-scans');
+        try {
+            const resp = await fetch('{% url "get_recent_scans" %}');
+            const data = await resp.json();
+            if (data.success) {
+                container.innerHTML = data.recent_scans.map(s => {
+                    const mainItem = s.items[0];
+                    const count = s.items.length;
+                    const itemsList = s.items.map(i => i.name).join(', ');
+
+                    return `
+                        <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100" title="${itemsList}">
+                            <div class="w-10 h-10 rounded-lg ${s.action === 'issue' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'} flex items-center justify-center">
+                                <i class="fas ${s.action === 'issue' ? 'fa-arrow-up' : 'fa-arrow-down'} text-sm"></i>
+                            </div>
+                            <div class="flex-1 overflow-hidden">
+                                <div class="flex items-center gap-2">
+                                    <p class="text-sm font-bold text-slate-800 truncate">${mainItem.name}${count > 1 ? ' + ' + (count - 1) + ' more' : ''}</p>
+                                    ${s.is_batch ? '<span class="px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 text-[8px] font-black uppercase">Batch</span>' : ''}
+                                </div>
+                                <p class="text-[10px] text-slate-400 font-bold uppercase">${s.action} • ${s.scanned_by.username}</p>
+                            </div>
+                            <p class="text-[10px] font-bold text-slate-400 whitespace-nowrap">${new Date(s.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                        </div>
+                    `;
+                }).join('');
+            }
+        } catch (e) { }
+    }
+
+    document.getElementById('start-camera').addEventListener('click', startCamera);
+    document.getElementById('stop-camera').addEventListener('click', stopCamera);
+    document.getElementById('manual-scan-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const data = document.getElementById('qr-data-input').value;
+        if (data) processScan(data);
+    });
+
+    function showNotification(msg, type) {
+        const n = document.createElement('div');
+        n.className = `fixed bottom-6 right-6 px-6 py-4 rounded-2xl shadow-xl z-50 transform transition-all duration-300 animate-bounce ${type === 'error' ? 'bg-red-600' : 'bg-slate-800'} text-white font-bold`;
+        n.innerText = msg;
+        document.body.appendChild(n);
+        setTimeout(() => n.remove(), 3000);
+    }
+
+    document.addEventListener('DOMContentLoaded', loadRecentScans);
+</script>
+{% endblock %}

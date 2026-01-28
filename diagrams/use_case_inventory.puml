@@ -1,0 +1,77 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Department User" as Dept
+actor "GSO Staff" as GSO
+actor "Admin" as Admin
+actor "Guest" as Guest
+
+package "Equipment QR Inventory System" {
+  usecase "Register / Request Approval" as UC_Register
+  usecase "Login" as UC_Login
+  usecase "View Dashboard" as UC_Dashboard
+  usecase "Update Profile" as UC_Profile
+  usecase "View Supplies" as UC_ViewSupplies
+  usecase "View Supply Detail" as UC_SupplyDetail
+  usecase "Create Supply Request" as UC_CreateRequest
+  usecase "View My Requests" as UC_ViewMyRequests
+  usecase "Scan QR (scan/issue/return)" as UC_QRScan
+  usecase "Generate QR for Supply/Request" as UC_GenQR
+  usecase "Approve/Reject Requests" as UC_ApproveReject
+  usecase "Release/Issue Supplies" as UC_Release
+  usecase "Manage Supplies (CRUD/Import)" as UC_ManageSupplies
+  usecase "Manage Categories" as UC_Categories
+  usecase "Manage Users (approve)" as UC_ManageUsers
+  usecase "View Reports / Export CSV" as UC_Reports
+  usecase "Receive Notifications" as UC_Notifications
+  usecase "View Recent Scans / Activity" as UC_RecentScans
+  usecase "Track Inventory Transactions" as UC_Transactions
+  usecase "Borrow/Return Items" as UC_BorrowReturn
+}
+
+' Associations
+Guest --> UC_Register
+Guest --> UC_Login
+
+Dept --> UC_Login
+Dept --> UC_Dashboard
+Dept --> UC_Profile
+Dept --> UC_ViewSupplies
+Dept --> UC_SupplyDetail
+Dept --> UC_CreateRequest
+Dept --> UC_ViewMyRequests
+Dept --> UC_QRScan
+Dept --> UC_Notifications
+Dept --> UC_BorrowReturn
+
+GSO --> UC_Login
+GSO --> UC_Dashboard
+GSO --> UC_ViewSupplies
+GSO --> UC_SupplyDetail
+GSO --> UC_ApproveReject
+GSO --> UC_Release
+GSO --> UC_ManageSupplies
+GSO --> UC_Reports
+GSO --> UC_QRScan
+GSO --> UC_RecentScans
+GSO --> UC_Notifications
+GSO --> UC_Transactions
+
+Admin --> UC_Login
+Admin --> UC_Dashboard
+Admin --> UC_ManageUsers
+Admin --> UC_ManageSupplies
+Admin --> UC_ApproveReject
+Admin --> UC_Reports
+Admin --> UC_Notifications
+Admin --> UC_Transactions
+
+' Include relationships
+UC_Release .> UC_Transactions : logs
+UC_CreateRequest .> UC_GenQR : generates
+UC_ManageSupplies .> UC_GenQR : generates
+UC_QRScan .> UC_BorrowReturn : triggers
+UC_ApproveReject .> UC_Notifications : notifies
+
+@enduml

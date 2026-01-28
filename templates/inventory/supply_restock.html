@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-lg mx-auto bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="bg-blue-600 px-6 py-4">
+            <h2 class="text-xl font-bold text-white">Restock Supply</h2>
+        </div>
+
+        <div class="p-6">
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-gray-800">
+                    {{ supply.name }}
+                </h3>
+                <p class="text-sm text-gray-500">
+                    Current Stock:
+                    <span class="font-medium text-gray-700">
+                        {{ supply.quantity }} {{ supply.unit }}
+                    </span>
+                </p>
+                <p class="text-sm text-gray-500">
+                    Min Stock Level:
+                    <span class="font-medium text-gray-700">
+                        {{ supply.min_stock_level }} {{ supply.unit }}
+                    </span>
+                </p>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="mb-4">
+                    <label for="quantity" class="block text-gray-700 text-sm font-bold mb-2">
+                        Quantity to Add
+                    </label>
+                    <input type="number" name="quantity" id="quantity" min="1" required
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                    <p class="text-xs text-gray-500 mt-1">
+                        Enter the amount of new items to add to the inventory.
+                    </p>
+                </div>
+
+                <div class="mb-4">
+                    <label for="timestamp" class="block text-gray-700 text-sm font-bold mb-2">
+                        Date & Time
+                    </label>
+                    <input type="datetime-local" name="timestamp" id="timestamp"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                    <p class="text-xs text-gray-500 mt-1">
+                        Leave blank to use current time.
+                    </p>
+                </div>
+
+                <div class="mb-6">
+                    <label for="reason" class="block text-gray-700 text-sm font-bold mb-2">
+                        Source / Reason (Optional)
+                    </label>
+                    <input type="text" name="reason" id="reason" placeholder="e.g. Purchase Order #123, Donation, etc."
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <button type="submit"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                        Add Stock
+                    </button>
+                    <a href="{% url 'supply_detail' supply.pk %}"
+                        class="inline-block align-baseline font-bold text-sm text-blue-600 hover:text-blue-800">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Recent History Section -->
+        <div class="bg-gray-50 px-6 py-4 border-t border-gray-200">
+            <h3 class="text-sm font-semibold text-gray-700 mb-3">
+                Recent Stock History
+            </h3>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-xs">
+                    <thead>
+                        <tr class="text-left text-gray-500 border-b border-gray-200">
+                            <th class="pb-2">Date</th>
+                            <th class="pb-2">Type</th>
+                            <th class="pb-2 text-right">Qty</th>
+                            <th class="pb-2 text-right">User</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-gray-600">
+                        {% for txn in recent_transactions %}
+                        <tr class="border-b border-gray-100 last:border-0">
+                            <td class="py-2">
+                                {{ txn.created_at|date:"M d, Y H:i" }}
+                            </td>
+                            <td class="py-2">
+                                <span class="px-2 py-0.5 rounded-full text-xs font-medium 
+                                    {% if txn.transaction_type == 'in' %}
+                                        bg-green-100 text-green-800
+                                    {% elif txn.transaction_type == 'out' %}
+                                        bg-red-100 text-red-800
+                                    {% else %}
+                                        bg-yellow-100 text-yellow-800
+                                    {% endif %}">
+                                    {{ txn.get_transaction_type_display }}
+                                </span>
+                            </td>
+                            <td class="py-2 text-right font-medium">
+                                {{ txn.quantity }}
+                            </td>
+                            <td class="py-2 text-right">
+                                {{ txn.performed_by.username }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="py-2 text-center text-gray-400">
+                                No recent history
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,66 @@
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold text-gray-800">Supplies Report</h2>
+        <div class="flex items-center gap-4">
+            <span class="text-sm text-gray-600">{{ filtered_supplies.count }} supply(ies)</span>
+            <div class="flex gap-2">
+                <a href="{% url 'export_supplies_csv' %}?search={{ search_query }}&date_from={{ date_from }}&date_to={{ date_to %}" 
+                   class="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded text-xs font-medium transition-colors"
+                   title="Download as CSV">
+                    <i class="fas fa-download"></i>CSV
+                </a>
+                <a href="{% url 'export_supplies_pdf' %}?search={{ search_query }}&date_from={{ date_from }}&date_to={{ date_to %}" 
+                   class="inline-flex items-center gap-1 px-3 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded text-xs font-medium transition-colors"
+                   title="Download as PDF">
+                    <i class="fas fa-download"></i>PDF
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Table -->
+    <div class="overflow-x-auto">
+        <table id="supplies-table" class="w-full text-sm display">
+            <thead class="bg-gray-50 border-b border-gray-200">
+                <tr>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Name</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Category</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Quantity</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Min Stock</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Status</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Unit</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Location</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Cost/Unit</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Created At</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for supply in filtered_supplies %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-4 py-3 text-gray-900 font-medium">{{ supply.name }}</td>
+                    <td class="px-4 py-3 text-gray-700">{{ supply.category.name }}</td>
+                    <td class="px-4 py-3 text-gray-700">{{ supply.quantity }}</td>
+                    <td class="px-4 py-3 text-gray-700">{{ supply.min_stock_level }}</td>
+                    <td class="px-4 py-3">
+                        {% if supply.stock_status == 'out_of_stock' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Out of Stock</span>
+                        {% elif supply.stock_status == 'low_stock' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Low Stock</span>
+                        {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">In Stock</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-gray-700">{{ supply.unit }}</td>
+                    <td class="px-4 py-3 text-gray-700">{{ supply.location }}</td>
+                    <td class="px-4 py-3 text-gray-700">${{ supply.cost_per_unit }}</td>
+                    <td class="px-4 py-3 text-gray-700">{{ supply.created_at|date:"M d, Y" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="px-4 py-8 text-center text-gray-500">No supplies found matching the filters</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -1,0 +1,218 @@
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    {% if requests %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Request ID
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Supply
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Quantity
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Purpose
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Date
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        QR Code
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for group in requests %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-xs font-medium text-gray-500">
+                            {% if group.group_id %}
+                            <span
+                                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                                <i class="fas fa-layer-group mr-1"></i>
+                                BATCH
+                            </span>
+                            <div class="mt-1">{{ group.group_id }}</div>
+                            {% else %}
+                            {{ group.items.0.request_id }}
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="space-y-1">
+                            {% for item in group.items %}
+                            <div class="text-sm">
+                                <span class="font-medium text-gray-900">{{ item.supply.name }}</span>
+                                <span class="text-gray-500">({{ item.quantity_requested }} {{ item.supply.unit }})</span>
+                            </div>
+                            {% endfor %}
+                            {% if group.is_borrowing %}
+                            <div class="mt-1">
+                                <span
+                                    class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-purple-100 text-purple-800">
+                                    <i class="fas fa-hand-holding mr-1"></i>
+                                    BORROWING
+                                </span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                    {% if group.status == 'pending' %}bg-yellow-100 text-yellow-800
+                                    {% elif group.status == 'approved' %}bg-blue-100 text-blue-800
+                                    {% elif group.status == 'released' %}bg-green-100 text-green-800
+                                    {% elif group.status == 'mixed' %}bg-purple-100 text-purple-800
+                                    {% else %}bg-red-100 text-red-800{% endif %}">
+                            {{ group.status|title }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ group.items.0.created_at|date:"M d, Y" }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if group.is_borrowing and group.status == 'approved' %}
+                        <button
+                            onclick="showQRCodeModal('{{ group.items.0.borrowing_qr_code.url }}', '{{ group.items.0.supply.name }}')"
+                            class="text-indigo-600 hover:text-indigo-900" title="View QR Code">
+                            <i class="fas fa-qrcode text-lg"></i>
+                        </button>
+                        {% else %}
+                        <span class="text-gray-400"><i class="fas fa-qrcode text-lg"></i></span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div class="flex items-center space-x-2">
+                            <a href="{% url 'request_detail' group.items.0.pk %}"
+                                class="text-indigo-600 hover:text-indigo-900" title="View Details">
+                                <i class="fas fa-eye text-lg"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination or "Load More" if needed -->
+    {% if requests.has_other_pages %}
+    <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+            <div>
+                <p class="text-sm text-gray-700">
+                    Showing <span class="font-medium">{{ requests.start_index }}</span> to <span class="font-medium">{{
+                        requests.end_index }}</span> of <span class="font-medium">{{ requests.paginator.count }}</span>
+                    results
+                </p>
+            </div>
+            <div>
+                <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                    {% if requests.has_previous %}
+                    <a href="?page=1{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}"
+                        class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                        <i class="fas fa-angle-double-left"></i>
+                    </a>
+                    <a href="?page={{ requests.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}"
+                        class="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                        <i class="fas fa-angle-left"></i>
+                    </a>
+                    {% endif %}
+
+                    <span
+                        class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                        Page {{ requests.number }} of {{ requests.paginator.num_pages }}
+                    </span>
+
+                    {% if requests.has_next %}
+                    <a href="?page={{ requests.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}"
+                        class="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                        <i class="fas fa-angle-right"></i>
+                    </a>
+                    <a href="?page={{ requests.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}"
+                        class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                        <i class="fas fa-angle-double-right"></i>
+                    </a>
+                    {% endif %}
+                </nav>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="p-8 text-center">
+        <i class="fas fa-inbox text-4xl text-gray-300 mb-4"></i>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">No requests found</h3>
+        <p class="text-gray-500 mb-4">
+            You haven't made any requests yet.
+        </p>
+        <a href="{% url 'request_create' %}"
+            class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+            <i class="fas fa-plus mr-2"></i>
+            Make First Request
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- QR Code Modal -->
+<div id="qr-code-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-800">Borrowing QR Code</h3>
+            <button onclick="closeQRCodeModal()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="text-center">
+            <img id="qr-code-image" src="" alt="QR Code" class="mx-auto max-w-full h-auto">
+            <p id="qr-code-item-name" class="text-sm text-gray-600 mt-2"></p>
+            <p class="text-xs text-gray-500 mt-1">Show this QR code to GSO staff when collecting or returning the item
+            </p>
+        </div>
+
+        <div class="mt-4 flex justify-center">
+            <a id="download-qr-code" href="#" download
+                class="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
+                <i class="fas fa-download mr-2"></i>
+                Download QR Code
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showQRCodeModal(qrCodeUrl, itemName) {
+        document.getElementById('qr-code-image').src = qrCodeUrl;
+        document.getElementById('qr-code-item-name').textContent = itemName;
+        document.getElementById('download-qr-code').href = qrCodeUrl;
+        document.getElementById('download-qr-code').download = 'qr-code-' + itemName.toLowerCase().replace(/\s+/g, '-') + '.png';
+        document.getElementById('qr-code-modal').classList.remove('hidden');
+    }
+
+    function closeQRCodeModal() {
+        document.getElementById('qr-code-modal').classList.add('hidden');
+    }
+
+    // Close modal when clicking outside
+    document.getElementById('qr-code-modal').addEventListener('click', function (e) {
+        if (e.target === this) {
+            closeQRCodeModal();
+        }
+    });
+
+    // Prevent closing when clicking inside the modal content
+    document.querySelector('#qr-code-modal .bg-white').addEventListener('click', function (e) {
+        e.stopPropagation();
+    });
+</script>

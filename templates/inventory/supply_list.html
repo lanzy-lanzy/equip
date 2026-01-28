@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+
+{% block title %}Supplies - Smart Supply Management System{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="mb-8">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Supply Inventory</h1>
+            <p class="text-gray-600">Manage and track all supplies in the system</p>
+        </div>
+        {% if user.role in 'admin,gso_staff' %}
+        <div class="mt-4 md:mt-0 flex gap-2">
+            <a href="{% url 'supply_create' %}"
+                class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+                <i class="fas fa-plus mr-2"></i>
+                Add New Supply
+            </a>
+            <a href="{% url 'supply_import' %}"
+                class="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
+                <i class="fas fa-file-import mr-2"></i>
+                Import CSV
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Filters and Search -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <!-- Search -->
+        <div class="md:col-span-2">
+            <label for="search" class="block text-sm font-medium text-gray-700 mb-2">Search Supplies</label>
+            <div class="relative">
+                <input type="text" id="search" name="search" value="{{ search }}"
+                    placeholder="Search by name, description, or category..."
+                    class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    hx-get="{% url 'supply_list' %}" hx-trigger="keyup changed delay:500ms" hx-target="#supply-list"
+                    hx-include="#search, #category, #stock">
+                <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+            </div>
+        </div>
+
+        <!-- Category Filter -->
+        <div>
+            <label for="category" class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+            <select id="category" name="category"
+                class="w-full py-2 px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                hx-get="{% url 'supply_list' %}" hx-trigger="change" hx-target="#supply-list"
+                hx-include="#search, #category, #stock">
+                <option value="">All Categories</option>
+                {% for cat in categories %}
+                <option value="{{ cat.id }}" {% if category_filter == cat.id|stringformat:"s" %}selected{% endif %}>
+                    {{ cat.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Stock Status Filter -->
+        <div>
+            <label for="stock" class="block text-sm font-medium text-gray-700 mb-2">Stock Status</label>
+            <select id="stock" name="stock"
+                class="w-full py-2 px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                hx-get="{% url 'supply_list' %}" hx-trigger="change" hx-target="#supply-list"
+                hx-include="#search, #category, #stock">
+                <option value="">All Status</option>
+                <option value="available" {% if stock_filter == 'available' %}selected{% endif %}>In Stock</option>
+                <option value="low" {% if stock_filter == 'low' %}selected{% endif %}>Low Stock</option>
+                <option value="out" {% if stock_filter == 'out' %}selected{% endif %}>Out of Stock</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- Supply List -->
+<div id="supply-list">
+    {% include 'inventory/partials/supply_list.html' %}
+</div>
+
+<!-- CSRF Token for AJAX requests -->
+{% csrf_token %}
+
+<!-- QR Code Modal (Hidden by default) -->
+<div id="qr-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6" id="qr-modal-content">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-800">QR Code</h3>
+            <button onclick="closeQRModal()" class="text-gray-400 hover:text-gray-600" type="button">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <div id="qr-content" class="text-center">
+            <!-- QR code will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<script>
+    function showQRCode(supplyId) {
+        const modal = document.getElementById('qr-modal');
+        const content = document.getElementById('qr-content');
+
+        // Show loading
+        content.innerHTML = '<i class="fas fa-spinner fa-spin text-2xl text-gray-400"></i>';
+        modal.classList.remove('hidden');
+
+        // Get CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        // Fetch QR code
+        fetch(`/supplies/${supplyId}/qr/`, {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': csrfToken,
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    content.innerHTML = `
+                    <img src="${data.qr_url}" alt="QR Code" class="mx-auto mb-4 max-w-full h-auto">
+                    <p class="text-sm text-gray-600">Supply: ${data.supply_name}</p>
+                    <p class="text-xs text-gray-500">ID: ${supplyId}</p>
+                    <a href="${data.qr_url}" download="supply_${supplyId}_qr.png"
+                       class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors mt-4">
+                        <i class="fas fa-download mr-2"></i>
+                        Download QR Code
+                    </a>
+                `;
+                } else {
+                    content.innerHTML = `<p class="text-red-600">Error: ${data.error}</p>`;
+                }
+            })
+            .catch(error => {
+                content.innerHTML = '<p class="text-red-600">Failed to load QR code</p>';
+            });
+    }
+
+    function closeQRModal() {
+        document.getElementById('qr-modal').classList.add('hidden');
+    }
+
+    // Close modal on outside click - but prevent closing when clicking inside the modal content
+    document.getElementById('qr-modal').addEventListener('click', function (e) {
+        // Check if the click was on the modal backdrop (not the content)
+        if (e.target === this) {
+            closeQRModal();
+        }
+    });
+
+    // Prevent closing when clicking inside the modal content
+    document.getElementById('qr-modal-content').addEventListener('click', function (e) {
+        e.stopPropagation();
+    });
+</script>
+{% endblock %}

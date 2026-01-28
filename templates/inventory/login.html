@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Smart Supply Management System</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            background: linear-gradient(135deg, #343131 0%, #A04747 100%);
+            min-height: 100vh;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4">
+    <div class="w-full max-w-md">
+        <!-- Logo/Brand -->
+        <div class="text-center mb-8">
+            <div class="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-boxes text-4xl text-white"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-white mb-2">Smart Supply</h1>
+            <p class="text-white/80">Management System</p>
+            <p class="text-sm text-white/60 mt-2">JHCSC Dumingag Campus</p>
+        </div>
+
+        <!-- Login Form -->
+        <div class="glass-card rounded-2xl shadow-2xl p-8">
+            <div class="text-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">Welcome Back</h2>
+                <p class="text-gray-600">Sign in to your account</p>
+            </div>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="mb-4 p-3 rounded-lg bg-red-100 border border-red-200 text-red-800 flex items-center">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+                
+                <!-- Username Field -->
+                <div>
+                    <label for="username" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-user mr-1"></i> Username
+                    </label>
+                    <input type="text" 
+                           name="username" 
+                           id="username" 
+                           required 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A04747] focus:border-[#A04747] transition-colors"
+                           placeholder="Enter your username">
+                </div>
+
+                <!-- Password Field -->
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-lock mr-1"></i> Password
+                    </label>
+                    <div class="relative">
+                        <input type="password" 
+                               name="password" 
+                               id="password" 
+                               required 
+                               class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#A04747] focus:border-[#A04747] transition-colors"
+                               placeholder="Enter your password">
+                        <button type="button" 
+                                onclick="togglePassword()"
+                                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                            <i id="password-eye" class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Remember Me (Optional) -->
+                <div class="flex items-center">
+                    <input type="checkbox" 
+                           name="remember" 
+                           id="remember" 
+                           class="h-4 w-4 text-[#A04747] focus:ring-[#A04747] border-gray-300 rounded">
+                    <label for="remember" class="ml-2 block text-sm text-gray-700">
+                        Remember me
+                    </label>
+                </div>
+
+                <!-- Login Button -->
+                <button type="submit" 
+                        class="w-full bg-gradient-to-r from-[#343131] to-[#A04747] text-white py-3 px-4 rounded-lg hover:from-[#A04747] hover:to-[#343131] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#A04747] transition-all duration-200 transform hover:scale-105">
+                    <i class="fas fa-sign-in-alt mr-2"></i>
+                    Sign In
+                </button>
+            </form>
+
+            <!-- Demo Credentials -->
+            <div class="mt-6 p-4 bg-amber-50 rounded-lg">
+                <p class="text-sm text-amber-800 mb-2"><i class="fas fa-info-circle mr-1"></i> Demo Accounts:</p>
+                <div class="text-xs text-amber-700 space-y-1">
+                    <div><strong>Admin:</strong> admin / password123</div>
+                    <div><strong>GSO Staff:</strong> gso / password123</div>
+                    <div><strong>Department:</strong> dept / password123</div>
+                </div>
+            </div>
+            
+            <!-- Register Link -->
+            <div class="mt-6 text-center">
+                <p class="text-gray-600">
+                    Don't have an account? 
+                    <a href="{% url 'register' %}" class="text-[#A04747] hover:text-[#343131] font-medium">
+                        Register here
+                    </a>
+                </p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center mt-6">
+            <p class="text-white/60 text-sm">
+                © 2024 JHCSC Dumingag Campus
+            </p>
+        </div>
+    </div>
+
+    <script>
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const passwordEye = document.getElementById('password-eye');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                passwordEye.className = 'fas fa-eye-slash';
+            } else {
+                passwordInput.type = 'password';
+                passwordEye.className = 'fas fa-eye';
+            }
+        }
+
+        // Add enter key support
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.querySelector('form').submit();
+            }
+        });
+    </script>
+</body>
+</html>
